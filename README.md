@@ -25,7 +25,7 @@
    # If you set restart_interval_minute, the tool will restart every (restart_interval_minute) minutes.
    restart_interval_minute = 0 
 
-   # If you set is_run_with_watchdog, there will be a daemon what is used to watch over streams process.
+   # If you set is_run_with_watchdog, there will be a daemon which is used to watch over streams process.
    is_run_with_watchdog = 1 
    
    server = { 
