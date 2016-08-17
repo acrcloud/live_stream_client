@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Author: xue
+# Author: qinxue.pan 
 # Email : xue@arcloud.com
 # Date  : 2016/08/15
 
@@ -55,6 +55,7 @@ class LiveStreamWorker():
             self.setDaemon(True)
             self._stream_url = stream_info['url']
             self._stream_acrid = stream_info['acrc_id']
+            self._program_id = stream_info.get('program_id', -1)
             self._worker_queue = worker_queue
             self._config = config
             self._fp_interval = config.get('fp_interval_sec', 2)
@@ -81,6 +82,7 @@ class LiveStreamWorker():
                     'callback_func': self._decode_callback,
                     'stream_url':self._stream_url,
                     'read_size_sec':self._fp_interval,
+                    'program_id':self._program_id,
                     'open_timeout_sec':self._download_timeout,
                     'read_timeout_sec':self._download_timeout,
                     'is_debug':0,
@@ -218,8 +220,8 @@ class LiveStreamWorker():
             result = True
             acr_id = self._stream_info['acrc_id']
             try:
-                host = self._config['server_host']
-                port = self._config['server_port']
+                host = self._stream_info['host']
+                port = self._stream_info['port']
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(self._upload_timeout)
                 sign = acr_id + (32-len(acr_id))*chr(0)
@@ -358,9 +360,12 @@ def parse_config():
         else:
             config['streams'] = []
             for stream_t in init_config['source']:
-                config['streams'].append({'url':stream_t[0], 'acrc_id':stream_t[1]})
-            config['server_host'] = init_config['server']['host']
-            config['server_port'] = init_config['server']['port']
+                tmp_stream_info = {'url':stream_t[0], 'acrc_id':stream_t[1]}
+                if len(stream_t) == 3:
+                    tmp_stream_info['program_id'] = int(stream_t[2])
+                tmp_stream_info['host'] = init_config['server']['host']
+                tmp_stream_info['port'] = init_config['server']['port']
+                config['streams'].append(tmp_stream_info)
     except Exception, e:
         print "Error: Load ./client.conf failed." + str(e)
         sys.exit(1)
@@ -369,8 +374,10 @@ def parse_config():
 def main():
     config = parse_config()
     client = LiveStreamClient(config)
-    client.start_withwatch()
-    #client.start_single()
+    if client.get("is_run_with_watchdog"):
+        client.start_withwatch()
+    else:
+        client.start_single()
 
 if __name__ == '__main__':
     main()
