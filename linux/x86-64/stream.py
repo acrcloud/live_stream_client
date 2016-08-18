@@ -91,7 +91,7 @@ class LiveStreamWorker():
                 if code == 0:
                     self._is_stop = True
                 else:
-                    self._config['logger'].error("CODE:"+str(code) + ", MSG:"+str(msg))
+                    self._config['logger'].error("URL:" + self._stream_url + ", CODE:"+str(code) + ", MSG:"+str(msg))
             except Exception as e:
                 self._config['logger'].error(str(e))
 
