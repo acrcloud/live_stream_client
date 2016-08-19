@@ -22,12 +22,12 @@ import acrcloud_stream_decode
 reload(sys)
 sys.setdefaultencoding("utf8")
 
-
 class LiveStreamWorker():
 
     def __init__(self, stream_info, config):
-        self._config = config
         self._stream_info = stream_info
+        self._config = config
+        self._logger = logging.getLogger('acrcloud_stream')
         
     def start(self):
         try:
@@ -39,42 +39,43 @@ class LiveStreamWorker():
             self._process_worker = process_worker
             process_worker.start()
         except Exception as e:
-            self._config['logger'].error(str(e))
+            self._logger.error(str(e))
 
     def wait(self):
         try:
             self._decode_worker.join()
             self._process_worker.join()
         except Exception as e:
-            self._config['logger'].error(str(e))
+            self._logger.error(str(e))
     
     class _DecodeStreamWorker(threading.Thread):
 
         def __init__(self, worker_queue, stream_info, config):
             threading.Thread.__init__(self)
             self.setDaemon(True)
+            self._config = config
             self._stream_url = stream_info['url']
             self._stream_acrid = stream_info['acrc_id']
             self._program_id = stream_info.get('program_id', -1)
             self._worker_queue = worker_queue
-            self._config = config
-            self._fp_interval = config.get('fp_interval_sec', 2)
+            self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._download_timeout = self._config.get('download_timeout_sec', 10)
             self._is_stop = True
+            self._logger = logging.getLogger('acrcloud_stream')
 
         def run(self):
             self._is_stop = False
-            self._config['logger'].info(self._stream_acrid + " DecodeStreamWorker running!")
+            self._logger.info(self._stream_acrid + " DecodeStreamWorker running!")
             old_stream_url = self._stream_url
             self._check_url()
-            self._config['logger'].info(old_stream_url+ ", after check_url:"+self._stream_url)
+            self._logger.info(old_stream_url+ ", after check_url:"+self._stream_url)
             while not self._is_stop:
                 try:
                     self._decode_stream()
                     time.sleep(1)
                 except Exception as e:
-                    self._config['logger'].error(str(e))
-            self._config['logger'].info(self._stream_acrid + " DecodeStreamWorker stopped!")
+                    self._logger.error(str(e))
+            self._logger.info(self._stream_acrid + " DecodeStreamWorker stopped!")
 
         def _decode_stream(self):
             try:
@@ -91,9 +92,9 @@ class LiveStreamWorker():
                 if code == 0:
                     self._is_stop = True
                 else:
-                    self._config['logger'].error("URL:" + self._stream_url + ", CODE:"+str(code) + ", MSG:"+str(msg))
+                    self._logger.error("CODE:"+str(code) + ", MSG:"+str(msg))
             except Exception as e:
-                self._config['logger'].error(str(e))
+                self._logger.error(str(e))
 
         def _decode_callback(self, isvideo, buf):
             try:
@@ -102,7 +103,7 @@ class LiveStreamWorker():
                 self._worker_queue.put(buf)
                 return 0
             except Exception as e:
-                self._config['logger'].error(str(e))
+                self._logger.error(str(e))
         
         def _check_url(self):
             try:
@@ -126,7 +127,7 @@ class LiveStreamWorker():
                     if slist:
                         self._stream_url = slist[0]
             except Exception as e:
-                self._config['logger'].error(str(e))
+                self._logger.error(str(e))
 
         def _parse_pls(self, url):
             plslist = []
@@ -173,7 +174,7 @@ class LiveStreamWorker():
                         resp.close()
                         return result
                 except Exception, e:
-                    self._config['logger'].error(str(e))
+                    self._logger.error(str(e))
                     if resp:
                         resp.close()
             return ''
@@ -186,17 +187,18 @@ class LiveStreamWorker():
             self._config = config
             self._worker_queue = worker_queue
             self._stream_info = stream_info
-            self._fp_time = config.get('fp_time_sec', 6)
-            self._fp_max_time = config.get('fp_max_time_sec', 12)
-            self._fp_interval = config.get('fp_interval_sec', 2)
+            self._fp_time = self._config.get('fp_time_sec', 6)
+            self._fp_max_time = self._config.get('fp_max_time_sec', 12)
+            self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._upload_timeout = self._config.get('upload_timeout_sec', 10)
             self._is_stop = True
+            self._logger = logging.getLogger('acrcloud_stream')
 
         def run(self):
             last_buf = ''
             doc_pre_time = self._fp_time - self._fp_interval
             acr_id = self._stream_info['acrc_id']
-            self._config['logger'].info(acr_id + " ProcessFingerprintWorker running!")
+            self._logger.info(acr_id + " ProcessFingerprintWorker running!")
             self._is_stop = False
             while not self._is_stop:
                 try:
@@ -213,8 +215,8 @@ class LiveStreamWorker():
                     if len(last_buf) > doc_pre_time*16000:
                         last_buf = last_buf[-1*doc_pre_time*16000:]
                 except Exception as e:
-                    self._config['logger'].error(str(e))
-            self._config['logger'].info(acr_id + " ProcessFingerprintWorker stopped!")
+                    self._logger.error(str(e))
+            self._logger.info(acr_id + " ProcessFingerprintWorker stopped!")
 
         def _upload(self, fp):
             result = True
@@ -230,22 +232,57 @@ class LiveStreamWorker():
                 sock.connect((host, port))
                 sock.send(header+body)
                 row = struct.unpack('!ii', sock.recv(8))
-                self._config['logger'].info(acr_id + ":" + str(len(fp)) + ":" + sock.recv(row[1]))
+                self._logger.info(acr_id + ":" + str(len(fp)) + ":" + sock.recv(row[1]))
                 sock.close()
             except Exception as e:
                 result = False
-                self._config['logger'].error(acr_id + ":" + str(len(fp)) + ":" + str(e))
+                self._logger.error(acr_id + ":" + str(len(fp)) + ":" + str(e))
 
             return result
+
+class LiveStreamManagerProcess(multiprocessing.Process):
+
+    def __init__(self, streams, config):
+        multiprocessing.Process.__init__(self)
+        self.daemon = True
+        self._streams = streams
+        self._config = config
+        self._workers = []
+
+    def run(self):
+        if self._config.get('debug'):
+            init_log(logging.INFO, self._config['log_file'])
+        else:
+            init_log(logging.ERROR, self._config['log_file'])
+        self.run_worker()
+        self.wait()
+
+    def run_worker(self):
+        try:
+            for stream_t in self._streams:
+                worker = LiveStreamWorker(stream_t, self._config)
+                worker.start()
+                self._workers.append(worker)
+        except Exception as e:
+            self._logger.error(str(e))
+
+    def wait(self):
+        try:
+            for w in self._workers:
+                w.wait()
+        except Exception as e:
+            self._logger.error(str(e))
 
 class LiveStreamClient():
 
     def __init__(self, config):
-        self._config = config
         self._is_stop = True
+        self._manager_process = []
+        self._config = config
+        self._logger = logging.getLogger('acrcloud_stream')
 
     def start_single(self):
-        self._run_worker()
+        self._run_single()
 
     def start_withwatch(self):
         client_process = self._run_by_process()
@@ -254,49 +291,52 @@ class LiveStreamClient():
         watch_num = 0
         self._is_stop = False
         while not self._is_stop:
-            if not client_process.is_alive():
-                self._kill_process(client_process)
-                client_process = self._run_by_process()
+            if not self._check_alive():
+                self._kill_process()
+                self._run_by_process()
                 watch_num = 0
             time.sleep(1)
             watch_num = watch_num + 1
             if restart_interval > 0 and watch_num >= restart_interval:
-                self._kill_process(client_process)
-                client_process = self._run_by_process()
+                self._kill_process()
+                self._run_by_process()
                 watch_num = 0
+
+    def _run_single(self):
+        client_process = LiveStreamManagerProcess(self._config['streams'], self._config)
+        client_process.run_worker()
+        self._manager_process.append(client_process)
+        for mp in self._manager_process:
+            mp.wait()
                  
     def _run_by_process(self):
+        self._manager_process = []
         try:
-            client_process = multiprocessing.Process(target = self._run_worker, args = ())
-            client_process.daemon = True
+            client_process = LiveStreamManagerProcess(self._config['streams'], self._config)
             client_process.start()
-            return client_process
+            self._manager_process.append(client_process)
         except Exception as e:
-            self._config['logger'].error(str(e))
-            sys.exit(-1)
+            self._logger.error(str(e))
 
-    def _run_worker(self):
+    def _check_alive(self):
+        res = True
         try:
-            worker_list = []
-            for stream_t in self._config['streams']:
-                worker = LiveStreamWorker(stream_t, self._config)
-                worker.start()
-                worker_list.append(worker)
-
-            for w in worker_list:
-                w.wait()
-        except Exception as e:
-            self._config['logger'].error(str(e))
-            sys.exit(-1)
-
-    def _kill_process(self, proc):
-        if not proc:
-            return
-        try:
-            proc.terminate()
-            proc.join()
+            for mp in self._manager_process:
+                if not mp.is_alive():
+                    res = False
+                    break
         except Exception, e:
-            self._config['logger'].error(str(e))
+            self._logger.error(str(e))
+        return res
+
+
+    def _kill_process(self):
+        try:
+            for mp in self._manager_process:
+                mp.terminate()
+                mp.join()
+        except Exception, e:
+            self._logger.error(str(e))
 
 def get_remote_config(config):
     try:
@@ -312,9 +352,9 @@ def get_remote_config(config):
         json_res = json.loads(recv_msg)
         if json_res['response']['status']['code'] == 0:
             config['streams'] = json_res['response']['metainfos']
-        config['logger'].info(recv_msg)
+        logging.getLogger('acrcloud_stream').info(recv_msg)
     except Exception, e:
-        config['logger'].error('get_remote_config : %s' % str(e))
+        logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
         sys.exit(-1)
 
 def init_log(logging_level, log_file):
@@ -347,14 +387,19 @@ def parse_config():
         init_config = {}
         execfile(confpath, init_config)
         log_file = init_config.get('log_file', '')
+        config['log_file'] = log_file
+        config['debug'] = init_config.get('debug')
         if init_config.get('debug'):
-            config['logger'] = init_log(logging.INFO, log_file)
+            init_log(logging.INFO, log_file)
         else:
-            config['logger'] = init_log(logging.ERROR, log_file)
+            init_log(logging.ERROR, log_file)
 
         config['access_key'] = init_config['access_key']
         config['access_secret'] = init_config['access_secret']
         config['remote'] = init_config.get('remote')
+        config['restart_interval_minute'] = init_config.get('restart_interval_minute', 0)
+        config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
+        config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
         if init_config.get('remote'):
             get_remote_config(config)
         else:
@@ -370,6 +415,7 @@ def parse_config():
         print "Error: Load ./client.conf failed." + str(e)
         sys.exit(1)
     return config
+
 
 def main():
     config = parse_config()
