@@ -16,6 +16,7 @@ import socket
 import hmac
 import subprocess
 import multiprocessing
+import requests
 from xml.dom import minidom
 import acrcloud_stream_decode
 
@@ -55,7 +56,7 @@ class LiveStreamWorker():
             self.setDaemon(True)
             self._config = config
             self._stream_url = stream_info['url']
-            self._stream_acrid = stream_info['acrc_id']
+            self._stream_acrid = stream_info['acr_id']
             self._program_id = stream_info.get('program_id', -1)
             self._worker_queue = worker_queue
             self._fp_interval = self._config.get('fp_interval_sec', 2)
@@ -197,7 +198,7 @@ class LiveStreamWorker():
         def run(self):
             last_buf = ''
             doc_pre_time = self._fp_time - self._fp_interval
-            acr_id = self._stream_info['acrc_id']
+            acr_id = self._stream_info['acr_id']
             self._logger.info(acr_id + " ProcessFingerprintWorker running!")
             self._is_stop = False
             while not self._is_stop:
@@ -220,7 +221,7 @@ class LiveStreamWorker():
 
         def _upload(self, fp):
             result = True
-            acr_id = self._stream_info['acrc_id']
+            acr_id = self._stream_info['acr_id']
             try:
                 host = self._stream_info['host']
                 port = self._stream_info['port']
@@ -340,19 +341,29 @@ class LiveStreamClient():
 
 def get_remote_config(config):
     try:
+        bucket_name = config['bucket_name']
+        account_access_key = config['access_key']
+        account_access_secret = config['access_secret']
+        requrl = "https://ap-api.acrcloud.com/v1/buckets/"+bucket_name+"/channels"
+        http_method = "GET"
+        http_uri = "/v1/buckets/"+bucket_name+"/channels"
+        signature_version = "1" 
         timestamp = time.time()
-        signature = base64.b64encode(hmac.new(config['access_secret'], config['access_key']+str(timestamp), digestmod=hashlib.sha1).hexdigest())
-        values = {'access_key' : config['access_key'], 'timestamp': timestamp,
-            'sign' : signature}
-        data = urllib.urlencode(values)
-        url = 'http://console.acrcloud.com/service/channels?'+data
-        req = urllib2.Request(url)
-        response = urllib2.urlopen(req)
-        recv_msg = response.read()
-        json_res = json.loads(recv_msg)
-        if json_res['response']['status']['code'] == 0:
-            config['streams'] = json_res['response']['metainfos']
-        logging.getLogger('acrcloud_stream').info(recv_msg)
+
+        string_to_sign = http_method+"\n"+http_uri+"\n"+account_access_key+"\n"+signature_version+"\n"+str(timestamp)
+        sign = base64.b64encode(
+                        hmac.new(account_access_secret, string_to_sign, digestmod=hashlib.sha1)
+                                .digest())
+
+        headers = {'access-key': account_access_key, 'signature-version': signature_version, 'signature': sign, 'timestamp':timestamp}
+
+        r = requests.get(requrl, headers=headers, verify=True)
+        r.encoding = "utf-8"
+        if r.status_code == 200:
+            recv_msg = r.text
+            json_res = json.loads(recv_msg)
+            config['streams'] = json_res['items']
+            logging.getLogger('acrcloud_stream').info(recv_msg)
     except Exception, e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
         sys.exit(-1)
@@ -394,18 +405,19 @@ def parse_config():
         else:
             init_log(logging.ERROR, log_file)
 
-        config['access_key'] = init_config['access_key']
-        config['access_secret'] = init_config['access_secret']
+        config['access_key'] = init_config['console_access_key']
+        config['access_secret'] = init_config['console_access_secret']
         config['remote'] = init_config.get('remote')
         config['restart_interval_minute'] = init_config.get('restart_interval_minute', 0)
         config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
+        config['bucket_name'] = init_config.get('bucket_name')
         if init_config.get('remote'):
             get_remote_config(config)
         else:
             config['streams'] = []
             for stream_t in init_config['source']:
-                tmp_stream_info = {'url':stream_t[0], 'acrc_id':stream_t[1]}
+                tmp_stream_info = {'url':stream_t[0], 'acr_id':stream_t[1]}
                 if len(stream_t) == 3:
                     tmp_stream_info['program_id'] = int(stream_t[2])
                 tmp_stream_info['host'] = init_config['server']['host']
