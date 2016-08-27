@@ -198,7 +198,7 @@ class LiveStreamWorker():
         def run(self):
             last_buf = ''
             doc_pre_time = self._fp_time - self._fp_interval
-            acr_id = self._stream_info['acrc_id']
+            acr_id = self._stream_info['acr_id']
             self._logger.info(acr_id + " ProcessFingerprintWorker running!")
             self._is_stop = False
             while not self._is_stop:
@@ -221,7 +221,7 @@ class LiveStreamWorker():
 
         def _upload(self, fp):
             result = True
-            acr_id = self._stream_info['acrc_id']
+            acr_id = self._stream_info['acr_id']
             try:
                 host = self._stream_info['host']
                 port = self._stream_info['port']
@@ -344,7 +344,7 @@ def get_remote_config(config):
         bucket_name = config['bucket_name']
         account_access_key = config['access_key']
         account_access_secret = config['access_secret']
-        requrl = "https://api.acrcloud.com/v1/"+bucket_name+"/eu_test/channels"
+        requrl = "https://ap-api.acrcloud.com/v1/buckets/"+bucket_name+"/channels"
         http_method = "GET"
         http_uri = "/v1/buckets/"+bucket_name+"/channels"
         signature_version = "1" 
@@ -417,7 +417,7 @@ def parse_config():
         else:
             config['streams'] = []
             for stream_t in init_config['source']:
-                tmp_stream_info = {'url':stream_t[0], 'acrc_id':stream_t[1]}
+                tmp_stream_info = {'url':stream_t[0], 'acr_id':stream_t[1]}
                 if len(stream_t) == 3:
                     tmp_stream_info['program_id'] = int(stream_t[2])
                 tmp_stream_info['host'] = init_config['server']['host']
