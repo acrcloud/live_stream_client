@@ -355,7 +355,7 @@ def get_remote_config(config):
                         hmac.new(account_access_secret, string_to_sign, digestmod=hashlib.sha1)
                                 .digest())
 
-        headers = {'access-key': account_access_key, 'signature-version': signature_version, 'signature': sign, 'timestamp':timestamp}
+        headers = {'access-key': account_access_key, 'signature-version': signature_version, 'signature': sign, 'timestamp':str(timestamp)}
 
         r = requests.get(requrl, headers=headers, verify=True)
         r.encoding = "utf-8"
