@@ -48,7 +48,7 @@ class LiveStreamWorker():
             self._process_worker.join()
         except Exception as e:
             self._logger.error(str(e))
-    
+
     class _DecodeStreamWorker(threading.Thread):
 
         def __init__(self, worker_queue, stream_info, config):
@@ -56,6 +56,7 @@ class LiveStreamWorker():
             self.setDaemon(True)
             self._config = config
             self._stream_url = stream_info['url']
+            self._stream_url_list = []
             self._stream_acrid = stream_info['acr_id']
             self._program_id = stream_info.get('program_id', -1)
             self._worker_queue = worker_queue
@@ -67,22 +68,22 @@ class LiveStreamWorker():
         def run(self):
             self._is_stop = False
             self._logger.info(self._stream_acrid + " DecodeStreamWorker running!")
-            old_stream_url = self._stream_url
             self._check_url()
-            self._logger.info(old_stream_url+ ", after check_url:"+self._stream_url)
+            self._logger.info(self._stream_url + ", after check_url:" + str(self._stream_url_list))
             while not self._is_stop:
                 try:
-                    self._decode_stream()
-                    time.sleep(1)
+                    for stream_url in self._stream_url_list:
+                        self._decode_stream(stream_url)
+                        time.sleep(1)
                 except Exception as e:
                     self._logger.error(str(e))
             self._logger.info(self._stream_acrid + " DecodeStreamWorker stopped!")
 
-        def _decode_stream(self):
+        def _decode_stream(self, stream_url):
             try:
                 acrdict = {
                     'callback_func': self._decode_callback,
-                    'stream_url':self._stream_url,
+                    'stream_url': stream_url,
                     'read_size_sec':self._fp_interval,
                     'program_id':self._program_id,
                     'open_timeout_sec':self._download_timeout,
@@ -111,22 +112,25 @@ class LiveStreamWorker():
                 if self._stream_url.strip().startswith("mms://"):
                     slist = self._parse_mms(self._stream_url)
                     if slist:
-                        self._stream_url = slist[0]
+                        self._stream_url_list = slist
+                        return
                 
                 path = urlparse.urlparse(self._stream_url).path
                 ext = os.path.splitext(path)[1]
                 if ext == '.m3u':
                     slist = self._parse_m3u(self._stream_url)
                     if slist:
-                        self._stream_url = slist[0]
+                        self._stream_url_list = slist
                 elif ext == '.xspf':
                     slist = self._parse_xspf(self._stream_url)
                     if slist:
-                        self._stream_url = slist[0]
+                        self._stream_url_list = slist
                 elif ext == '.pls':
                     slist = self._parse_pls(self._stream_url)
                     if slist:
-                        self._stream_url = slist[0]
+                        self._stream_url_list = slist
+                else:
+                    self._stream_url_list = [self._stream_url]
             except Exception as e:
                 self._logger.error(str(e))
 
@@ -155,7 +159,7 @@ class LiveStreamWorker():
 
         def _parse_mms(self, url):
             mmslist = []
-            convert = ['mmst', 'mmsh', 'rtsp']
+            convert = ['mmsh', 'mmst', 'rtsp']
             mmslist = [ conv + url[3:] for conv in convert ]
             return mmslist
 
