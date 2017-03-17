@@ -196,29 +196,45 @@ class LiveStreamWorker():
             self._fp_max_time = self._config.get('fp_max_time_sec', 12)
             self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._upload_timeout = self._config.get('upload_timeout_sec', 10)
+            self._record_upload_time = self._config.get('record_upload_time', 50)
+            self._record_fp_max_time = self._config.get('record_fp_max_time', 120)
+            self._record_upload = self._config.get('record_upload', 0)
             self._is_stop = True
             self._logger = logging.getLogger('acrcloud_stream')
 
         def run(self):
             last_buf = ''
+            record_last_buf = ''
             doc_pre_time = self._fp_time - self._fp_interval
             acr_id = self._stream_info['acr_id']
             self._logger.info(acr_id + " ProcessFingerprintWorker running!")
             self._is_stop = False
             while not self._is_stop:
                 try:
+                    live_upload = True
                     now_buf = self._worker_queue.get()
                     cur_buf = last_buf + now_buf
                     last_buf = cur_buf
 
                     fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False)
                     if fp and not self._upload(fp):
+                        live_upload = False
                         if len(last_buf) > self._fp_max_time*16000:
                             last_buf = last_buf[len(last_buf)-self._fp_max_time*16000:]
-                        continue
 
-                    if len(last_buf) > doc_pre_time*16000:
+                    if live_upload and len(last_buf) > doc_pre_time*16000:
                         last_buf = last_buf[-1*doc_pre_time*16000:]
+
+                    if self._record_upload == 1:
+                        record_last_buf = record_last_buf + now_buf
+                        if len(record_last_buf) > self._record_upload_time * 16000:
+                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False)
+                            if record_fp and self._upload_record(record_fp):
+                                record_last_buf = ''
+                            else:
+                                if len(record_last_buf) > self._record_fp_max_time * 16000:
+                                    record_last_buf = record_last_buf[len(last_buf)-self._record_fp_max_time*16000:]
+
                 except Exception as e:
                     self._logger.error(str(e))
             self._logger.info(acr_id + " ProcessFingerprintWorker stopped!")
@@ -242,6 +258,30 @@ class LiveStreamWorker():
             except Exception as e:
                 result = False
                 self._logger.error(acr_id + ":" + str(len(fp)) + ":" + str(e))
+
+            return result
+        def _upload_record(self, fp):
+            result = True
+            acr_id = self._stream_info['acr_id']
+            stream_id = self._stream_info['id']
+            timestamp = int(time.time())
+            detail = str(stream_id)+":"+str(timestamp)
+            try:
+                host = self._stream_info['record_host']
+                port = self._stream_info['record_port']
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(self._upload_timeout)
+                sign = acr_id + (32-len(acr_id))*chr(0)
+                body = str(sign) +struct.pack('!I', len(detail)) + detail + fp
+                header = struct.pack('!cBBBIB', 'M', 1, 24, 0, len(body)+1, 1)
+                sock.connect((host, port))
+                sock.send(header+body)
+                row = struct.unpack('!ii', sock.recv(8))
+                self._logger.info(acr_id + ":record:" + str(len(fp)) + ":" + detail+":"+ sock.recv(row[1]))
+                sock.close()
+            except Exception as e:
+                result = False
+                self._logger.error(acr_id + ":record:" + str(len(fp)) + ":" + str(e))
 
             return result
 
@@ -348,7 +388,7 @@ def get_remote_config(config):
         bucket_name = config['bucket_name']
         account_access_key = config['access_key']
         account_access_secret = config['access_secret']
-        requrl = "https://ap-api.acrcloud.com/v1/buckets/"+bucket_name+"/channels"
+        requrl = "https://api.acrcloud.com/v1/buckets/"+bucket_name+"/channels"
         http_method = "GET"
         http_uri = "/v1/buckets/"+bucket_name+"/channels"
         signature_version = "1" 
@@ -416,6 +456,8 @@ def parse_config():
         config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
         config['bucket_name'] = init_config.get('bucket_name')
+        config['record_upload'] = init_config.get('record_upload')
+        config['record_upload_time'] = init_config.get('record_upload_time')
         if init_config.get('remote'):
             get_remote_config(config)
         else:
