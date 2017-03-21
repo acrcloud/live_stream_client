@@ -27,6 +27,8 @@ x64: [download and install Library(windows/vcredist_x64.exe)](https://www.micros
    bucket_name = "your_bucket_name"
    remote = 1 
    debug = 0 
+   record_upload = 0
+   record_upload_time = 60
    
    # If you do not set log_file, the log will be echo to console.
    log_file = "acrcloud_stream.log"
