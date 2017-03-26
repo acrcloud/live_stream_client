@@ -196,7 +196,7 @@ class LiveStreamWorker():
             self._fp_max_time = self._config.get('fp_max_time_sec', 12)
             self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._upload_timeout = self._config.get('upload_timeout_sec', 10)
-            self._record_upload_time = self._config.get('record_upload_time', 50)
+            self._record_upload_interval = self._config.get('record_upload_interval', 60)
             self._record_fp_max_time = self._config.get('record_fp_max_time', 120)
             self._record_upload = self._config.get('record_upload', 0)
             self._is_stop = True
@@ -227,7 +227,7 @@ class LiveStreamWorker():
 
                     if self._record_upload == 1:
                         record_last_buf = record_last_buf + now_buf
-                        if len(record_last_buf) > self._record_upload_time * 16000:
+                        if len(record_last_buf) > self._record_upload_interval * 16000:
                             record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False)
                             if record_fp and self._upload_record(record_fp):
                                 record_last_buf = ''
@@ -457,7 +457,7 @@ def parse_config():
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
         config['bucket_name'] = init_config.get('bucket_name')
         config['record_upload'] = init_config.get('record_upload')
-        config['record_upload_time'] = init_config.get('record_upload_time')
+        config['record_upload_interval'] = init_config.get('record_upload_interval')
         if init_config.get('remote'):
             get_remote_config(config)
         else:
