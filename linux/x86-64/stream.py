@@ -272,8 +272,8 @@ class LiveStreamWorker():
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(self._upload_timeout)
                 sign = acr_id + (32-len(acr_id))*chr(0)
-                body = str(sign) +struct.pack('!I', len(detail)) + detail + fp
-                header = struct.pack('!cBBBIB', 'M', 1, 24, 0, len(body)+1, 1)
+                body = str(sign) +struct.pack('I', len(detail)) + detail + fp
+                header = struct.pack('!cBBBIB', 'M', 1, 24, 0, len(body)+1, 2)
                 sock.connect((host, port))
                 sock.send(header+body)
                 row = struct.unpack('!ii', sock.recv(8))
