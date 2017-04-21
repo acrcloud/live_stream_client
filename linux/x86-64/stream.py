@@ -7,6 +7,7 @@
 
 import os, sys
 import json, Queue, struct, urllib, urllib2, logging
+import re
 import threading
 import hashlib
 import urlparse
