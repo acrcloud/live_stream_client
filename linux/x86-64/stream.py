@@ -17,7 +17,6 @@ import socket
 import hmac
 import subprocess
 import multiprocessing
-import requests
 from xml.dom import minidom
 import acrcloud_stream_decode
 
@@ -386,6 +385,7 @@ class LiveStreamClient():
 
 def get_remote_config(config):
     try:
+
         bucket_name = config['bucket_name']
         account_access_key = config['access_key']
         account_access_secret = config['access_secret']
@@ -402,16 +402,17 @@ def get_remote_config(config):
 
         headers = {'access-key': account_access_key, 'signature-version': signature_version, 'signature': sign, 'timestamp':str(timestamp)}
 
-        r = requests.get(requrl, headers=headers, verify=True)
-        r.encoding = "utf-8"
-        if r.status_code == 200:
-            recv_msg = r.text
-            json_res = json.loads(recv_msg)
-            config['streams'] = json_res['items']
-            logging.getLogger('acrcloud_stream').info(recv_msg)
+        req = urllib2.Request(requrl, headers=headers)
+        response = urllib2.urlopen(req)
+        recv_msg = response.read()
+        json_res = json.loads(recv_msg)
+        config['streams'] = json_res['items']
+        logging.getLogger('acrcloud_stream').info(recv_msg)
+
     except Exception, e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
         sys.exit(-1)
+
 
 def init_log(logging_level, log_file):
     try:
