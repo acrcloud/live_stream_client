@@ -209,6 +209,7 @@ class LiveStreamWorker():
             acr_id = self._stream_info['acr_id']
             self._logger.info(acr_id + " ProcessFingerprintWorker running!")
             self._is_stop = False
+            timeshift = self._stream_info.get('timeshift', 0);
             while not self._is_stop:
                 try:
                     live_upload = True
@@ -225,7 +226,7 @@ class LiveStreamWorker():
                     if live_upload and len(last_buf) > doc_pre_time*16000:
                         last_buf = last_buf[-1*doc_pre_time*16000:]
 
-                    if self._record_upload == 1:
+                    if self._record_upload == 1 or timeshift:
                         record_last_buf = record_last_buf + now_buf
                         if len(record_last_buf) > self._record_upload_interval * 16000:
                             record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False)
