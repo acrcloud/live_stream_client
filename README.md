@@ -17,7 +17,6 @@ x64: [download and install Library(windows/vcredist_x64.exe)](https://www.micros
 6. Run the stream.py
 7. Create a “Live Channel Detection” project and attach the bucket which contains your chosen stream urls.
 8. Then you can use our SDK to detect the current stream.
-9. If you use raspberry pi, you may need to install some libs.[sudo apt-get install libgmp-dev libgnutls-deb0-28]
  
 ## Configure
 ## client.conf
