@@ -23,6 +23,40 @@ import acrcloud_stream_decode
 reload(sys)
 sys.setdefaultencoding("utf8")
 
+def get_remote_config(config):
+    try:
+        bucket_name = config['bucket_name']
+        access_key = config['access_key']
+        access_secret = config['access_secret']
+	http_method = "GET"
+        http_uri = "/v2/buckets/"+bucket_name+"/channels"
+	items = []
+	page = 1
+	while True:
+            requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)
+	    req = urllib2.Request(requrl)
+	    base64string = base64.b64encode('%s:%s' % (access_key, access_secret))
+	    req.add_header("Authorization", "Basic %s" % base64string)
+            response = urllib2.urlopen(req)
+            recv_msg = response.read()
+            json_res = json.loads(recv_msg)
+            logging.getLogger('acrcloud_stream').info(recv_msg)
+	    if len(json_res['items']) > 0:
+	        for one in json_res['items']:
+		    items.append(one)
+	        if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
+	    	    break	    
+		else:
+		    page = page+1
+	    else:
+		break
+	
+        return items
+    except Exception, e:
+        logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
+        sys.exit(-1)
+
+
 class LiveStreamWorker():
 
     def __init__(self, stream_info, config):
@@ -102,7 +136,8 @@ class LiveStreamWorker():
             try:
                 if self._is_stop:
                     return 1
-                self._worker_queue.put(buf)
+                task = (1, buf)
+                self._worker_queue.put(task)
                 return 0
             except Exception as e:
                 self._logger.error(str(e))
@@ -192,13 +227,12 @@ class LiveStreamWorker():
             self._config = config
             self._worker_queue = worker_queue
             self._stream_info = stream_info
-            self._fp_time = self._config.get('fp_time_sec', 6)
-            self._fp_max_time = self._config.get('fp_max_time_sec', 12)
-            self._fp_interval = self._config.get('fp_interval_sec', 2)
-            self._upload_timeout = self._config.get('upload_timeout_sec', 10)
-            self._record_upload_interval = self._config.get('record_upload_interval', 60)
-            self._record_fp_max_time = self._config.get('record_fp_max_time', 120)
-            self._record_upload = self._config.get('record_upload', 0)
+            self._fp_time = stream_info.get('fp_time_sec', 6)
+            self._fp_max_time = stream_info.get('fp_max_time_sec', 12)
+            self._fp_interval = stream_info.get('fp_interval_sec', 2)
+            self._upload_timeout = stream_info.get('upload_timeout_sec', 10)
+            self._record_upload_interval = stream_info.get('record_upload_interval', 60)
+            self._record_fp_max_time = stream_info.get('record_fp_max_time', 120)
             self._is_stop = True
             self._logger = logging.getLogger('acrcloud_stream')
 
@@ -213,7 +247,10 @@ class LiveStreamWorker():
             while not self._is_stop:
                 try:
                     live_upload = True
-                    now_buf = self._worker_queue.get()
+                    task = self._worker_queue.get()
+                    task_type, now_buf = task
+                    if task_type == 2:
+                        self._stream_info = now_buf 
                     cur_buf = last_buf + now_buf
                     last_buf = cur_buf
 
@@ -226,7 +263,7 @@ class LiveStreamWorker():
                     if live_upload and len(last_buf) > doc_pre_time*16000:
                         last_buf = last_buf[-1*doc_pre_time*16000:]
 
-                    if self._record_upload == 1 or timeshift:
+                    if timeshift:
                         record_last_buf = record_last_buf + now_buf
                         if len(record_last_buf) > self._record_upload_interval * 16000:
                             record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False)
@@ -244,8 +281,8 @@ class LiveStreamWorker():
             result = True
             acr_id = self._stream_info['acr_id']
             try:
-                host = self._stream_info['host']
-                port = self._stream_info['port']
+                host = self._stream_info['live_host']
+                port = self._stream_info['live_port']
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(self._upload_timeout)
                 sign = acr_id + (32-len(acr_id))*chr(0)
@@ -268,8 +305,8 @@ class LiveStreamWorker():
             timestamp = int(time.time())
             detail = str(stream_id)+":"+str(timestamp)
             try:
-                host = self._stream_info['record_host']
-                port = self._stream_info['record_port']
+                host = self._stream_info['timeshift_host']
+                port = self._stream_info['timeshift_port']
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(self._upload_timeout)
                 sign = acr_id + (32-len(acr_id))*chr(0)
@@ -333,27 +370,56 @@ class LiveStreamClient():
     def start_withwatch(self):
         client_process = self._run_by_process()
         restart_interval = int(self._config.get('restart_interval_minute', 0)) * 60
+        check_update_interval = int(self._config.get('check_update_interval_minute', 0)) * 60
 
         watch_num = 0
+	check_update_num = 0
         self._is_stop = False
         while not self._is_stop:
             if not self._check_alive():
+		self._check_update()
                 self._kill_process()
                 self._run_by_process()
                 watch_num = 0
-            time.sleep(1)
-            watch_num = watch_num + 1
+            time.sleep(5)
+            watch_num = watch_num + 5
+	    check_update_num = check_update_num + 5 
             if restart_interval > 0 and watch_num >= restart_interval:
+		self._check_update()
                 self._kill_process()
                 self._run_by_process()
                 watch_num = 0
+	    if check_update_interval > 0 and check_update_num > check_update_interval:
+		if self._check_update():
+		    self._kill_process()
+		    self._run_by_process()
+		check_update_num = 0
 
+    def _check_update(self):
+	streams = get_remote_config(self._config)
+	update = False
+	d = {}
+	for s in self._config['streams']:
+	    d[s['id']] = s
+	for s in streams:
+	    if not d.has_key(s['id']):
+		update = True
+		self._config['streams'] = streams
+		break
+	    else:
+		if d[s['id']]['live_host'] != s['live_host'] or d[s['id']]['live_port'] != s['live_port'] \
+		        or d[s['id']]['timeshift_host'] != s['timeshift_host'] or d[s['id']]['timeshift_port'] != s['timeshift_port'] \
+			or d[s['id']]['url'] != s['url'] or d[s['id']]['timeshift'] != s['timeshift']:
+		    update = True
+		    self._config['streams'] = streams
+		    break
+	print (update, streams)
+	return update
+		    
     def _run_single(self):
         client_process = LiveStreamManagerProcess(self._config['streams'], self._config)
         client_process.run_worker()
-        self._manager_process.append(client_process)
-        for mp in self._manager_process:
-            mp.wait()
+        client_process.wait()
                  
     def _run_by_process(self):
         self._manager_process = []
@@ -383,37 +449,6 @@ class LiveStreamClient():
                 mp.join()
         except Exception, e:
             self._logger.error(str(e))
-
-def get_remote_config(config):
-    try:
-
-        bucket_name = config['bucket_name']
-        account_access_key = config['access_key']
-        account_access_secret = config['access_secret']
-        requrl = "https://api.acrcloud.com/v1/buckets/"+bucket_name+"/channels"
-        http_method = "GET"
-        http_uri = "/v1/buckets/"+bucket_name+"/channels"
-        signature_version = "1" 
-        timestamp = time.time()
-
-        string_to_sign = http_method+"\n"+http_uri+"\n"+account_access_key+"\n"+signature_version+"\n"+str(timestamp)
-        sign = base64.b64encode(
-                        hmac.new(account_access_secret, string_to_sign, digestmod=hashlib.sha1)
-                                .digest())
-
-        headers = {'access-key': account_access_key, 'signature-version': signature_version, 'signature': sign, 'timestamp':str(timestamp)}
-
-        req = urllib2.Request(requrl, headers=headers)
-        response = urllib2.urlopen(req)
-        recv_msg = response.read()
-        json_res = json.loads(recv_msg)
-        config['streams'] = json_res['items']
-        logging.getLogger('acrcloud_stream').info(recv_msg)
-
-    except Exception, e:
-        logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
-        sys.exit(-1)
-
 
 def init_log(logging_level, log_file):
     try:
@@ -456,13 +491,14 @@ def parse_config():
         config['access_secret'] = init_config['console_access_secret']
         config['remote'] = init_config.get('remote')
         config['restart_interval_minute'] = init_config.get('restart_interval_minute', 0)
+        config['check_update_interval_minute'] = init_config.get('check_update_interval_minute', 0)
         config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
         config['bucket_name'] = init_config.get('bucket_name')
         config['record_upload'] = init_config.get('record_upload')
         config['record_upload_interval'] = init_config.get('record_upload_interval')
         if init_config.get('remote'):
-            get_remote_config(config)
+            config['streams'] = get_remote_config(config)
         else:
             config['streams'] = []
             for stream_t in init_config['source']:
@@ -481,10 +517,10 @@ def parse_config():
 def main():
     config = parse_config()
     client = LiveStreamClient(config)
-    if config.get("is_run_with_watchdog"):
-        client.start_withwatch()
-    else:
-        client.start_single()
+    #if config.get("is_run_with_watchdog"):
+    client.start_withwatch()
+    #else:
+    #    client.start_single()
 
 if __name__ == '__main__':
     main()
