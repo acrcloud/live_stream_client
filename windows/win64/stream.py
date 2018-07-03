@@ -289,7 +289,7 @@ class LiveStreamWorker():
                 body = str(sign) + fp
                 header = struct.pack('!cBBBIB', 'M', 1, 24, 1, len(body)+1, 1)
                 sock.connect((host, port))
-                sock.send(header+body)
+                sock.sendall(header+body)
                 row = struct.unpack('!ii', sock.recv(8))
                 self._logger.info(acr_id + ":" + str(len(fp)) + ":" + sock.recv(row[1]))
                 sock.close()
@@ -313,7 +313,7 @@ class LiveStreamWorker():
                 body = str(sign) +struct.pack('I', len(detail)) + detail + fp
                 header = struct.pack('!cBBBIB', 'M', 1, 24, 0, len(body)+1, 2)
                 sock.connect((host, port))
-                sock.send(header+body)
+                sock.sendall(header+body)
                 row = struct.unpack('!ii', sock.recv(8))
                 self._logger.info(acr_id + ":record:" + str(len(fp)) + ":" + detail+":"+ sock.recv(row[1]))
                 sock.close()
