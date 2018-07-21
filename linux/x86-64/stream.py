@@ -369,7 +369,7 @@ class LiveStreamClient():
 
     def start_withwatch(self):
         client_process = self._run_by_process()
-        restart_interval = int(self._config.get('restart_interval_minute', 0)) * 60
+        restart_interval = int(self._config.get('restart_interval_seconds', 0))
         check_update_interval = int(self._config.get('check_update_interval_minute', 0)) * 60
 
         watch_num = 0
@@ -490,7 +490,7 @@ def parse_config():
         config['access_key'] = init_config['console_access_key']
         config['access_secret'] = init_config['console_access_secret']
         config['remote'] = init_config.get('remote')
-        config['restart_interval_minute'] = init_config.get('restart_interval_minute', 0)
+        config['restart_interval_seconds'] = init_config.get('restart_interval_seconds', 0)
         config['check_update_interval_minute'] = init_config.get('check_update_interval_minute', 0)
         config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
