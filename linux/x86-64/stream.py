@@ -96,6 +96,7 @@ class LiveStreamWorker():
             self._worker_queue = worker_queue
             self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._download_timeout = self._config.get('download_timeout_sec', 10)
+            self._open_timeout = self._config.get('open_timeout_sec', 10)
             self._is_stop = True
             self._logger = logging.getLogger('acrcloud_stream')
 
@@ -120,7 +121,7 @@ class LiveStreamWorker():
                     'stream_url': stream_url,
                     'read_size_sec':self._fp_interval,
                     'program_id':self._program_id,
-                    'open_timeout_sec':self._download_timeout,
+                    'open_timeout_sec':self._open_timeout,
                     'read_timeout_sec':self._download_timeout,
                     'is_debug':0,
                 }
