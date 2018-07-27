@@ -498,6 +498,8 @@ def parse_config():
         config['bucket_name'] = init_config.get('bucket_name')
         config['record_upload'] = init_config.get('record_upload')
         config['record_upload_interval'] = init_config.get('record_upload_interval')
+        config['download_timeout_sec'] = init_config.get('download_timeout_sec', 10)
+        config['open_timeout_sec'] = init_config.get('open_timeout_sec', 10)
         if init_config.get('remote'):
             config['streams'] = get_remote_config(config)
         else:
