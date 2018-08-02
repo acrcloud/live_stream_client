@@ -400,25 +400,28 @@ class LiveStreamClient():
                 self._logger.error(str(e))
 
     def _check_update(self):
-	streams = get_remote_config(self._config)
-	update = False
-	d = {}
-	for s in self._config['streams']:
-	    d[s['id']] = s
-	for s in streams:
-	    if not d.has_key(s['id']):
-		update = True
-		self._config['streams'] = streams
-		break
-	    else:
-		if d[s['id']]['live_host'] != s['live_host'] or d[s['id']]['live_port'] != s['live_port'] \
-		        or d[s['id']]['timeshift_host'] != s['timeshift_host'] or d[s['id']]['timeshift_port'] != s['timeshift_port'] \
-			or d[s['id']]['url'] != s['url'] or d[s['id']]['timeshift'] != s['timeshift']:
-		    update = True
-		    self._config['streams'] = streams
-		    break
-	print (update, streams)
-	return update
+        try:
+	    streams = get_remote_config(self._config)
+	    update = False
+	    d = {}
+	    for s in self._config['streams']:
+	        d[s['id']] = s
+	    for s in streams:
+	        if not d.has_key(s['id']):
+	    	update = True
+	    	self._config['streams'] = streams
+	    	break
+	        else:
+	    	if d[s['id']]['live_host'] != s['live_host'] or d[s['id']]['live_port'] != s['live_port'] \
+	    	        or d[s['id']]['timeshift_host'] != s['timeshift_host'] or d[s['id']]['timeshift_port'] != s['timeshift_port'] \
+	    		or d[s['id']]['url'] != s['url'] or d[s['id']]['timeshift'] != s['timeshift']:
+	    	    update = True
+	    	    self._config['streams'] = streams
+	    	    break
+	    print (update, streams)
+	    return update
+        except Exception, e:
+            self._logger.error(str(e))
 		    
     def _run_single(self):
         client_process = LiveStreamManagerProcess(self._config['streams'], self._config)
