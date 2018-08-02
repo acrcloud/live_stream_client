@@ -54,7 +54,7 @@ def get_remote_config(config):
         return items
     except Exception, e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
-        sys.exit(-1)
+        #sys.exit(-1)
 
 
 class LiveStreamWorker():
@@ -96,6 +96,7 @@ class LiveStreamWorker():
             self._worker_queue = worker_queue
             self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._download_timeout = self._config.get('download_timeout_sec', 10)
+            self._open_timeout = self._config.get('open_timeout_sec', 10)
             self._is_stop = True
             self._logger = logging.getLogger('acrcloud_stream')
 
@@ -120,7 +121,7 @@ class LiveStreamWorker():
                     'stream_url': stream_url,
                     'read_size_sec':self._fp_interval,
                     'program_id':self._program_id,
-                    'open_timeout_sec':self._download_timeout,
+                    'open_timeout_sec':self._open_timeout,
                     'read_timeout_sec':self._download_timeout,
                     'is_debug':0,
                 }
@@ -369,31 +370,34 @@ class LiveStreamClient():
 
     def start_withwatch(self):
         client_process = self._run_by_process()
-        restart_interval = int(self._config.get('restart_interval_minute', 0)) * 60
+        restart_interval = int(self._config.get('restart_interval_seconds', 0))
         check_update_interval = int(self._config.get('check_update_interval_minute', 0)) * 60
 
         watch_num = 0
 	check_update_num = 0
         self._is_stop = False
         while not self._is_stop:
-            if not self._check_alive():
-		self._check_update()
-                self._kill_process()
-                self._run_by_process()
-                watch_num = 0
-            time.sleep(5)
-            watch_num = watch_num + 5
-	    check_update_num = check_update_num + 5 
-            if restart_interval > 0 and watch_num >= restart_interval:
-		self._check_update()
-                self._kill_process()
-                self._run_by_process()
-                watch_num = 0
-	    if check_update_interval > 0 and check_update_num > check_update_interval:
-		if self._check_update():
-		    self._kill_process()
-		    self._run_by_process()
-		check_update_num = 0
+            try:
+                if not self._check_alive():
+	            self._check_update()
+                    self._kill_process()
+                    self._run_by_process()
+                    watch_num = 0
+                time.sleep(5)
+                watch_num = watch_num + 5
+	        check_update_num = check_update_num + 5 
+                if restart_interval > 0 and watch_num >= restart_interval:
+	            self._check_update()
+                    self._kill_process()
+                    self._run_by_process()
+                    watch_num = 0
+	        if check_update_interval > 0 and check_update_num > check_update_interval:
+	            if self._check_update():
+	                self._kill_process()
+	                self._run_by_process()
+	            check_update_num = 0
+            except Exception, e:
+                self._logger.error(str(e))
 
     def _check_update(self):
 	streams = get_remote_config(self._config)
@@ -490,15 +494,21 @@ def parse_config():
         config['access_key'] = init_config['console_access_key']
         config['access_secret'] = init_config['console_access_secret']
         config['remote'] = init_config.get('remote')
-        config['restart_interval_minute'] = init_config.get('restart_interval_minute', 0)
+        config['restart_interval_seconds'] = init_config.get('restart_interval_seconds', 0)
         config['check_update_interval_minute'] = init_config.get('check_update_interval_minute', 0)
         config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
         config['bucket_name'] = init_config.get('bucket_name')
         config['record_upload'] = init_config.get('record_upload')
         config['record_upload_interval'] = init_config.get('record_upload_interval')
+        config['download_timeout_sec'] = init_config.get('download_timeout_sec', 10)
+        config['open_timeout_sec'] = init_config.get('open_timeout_sec', 10)
         if init_config.get('remote'):
-            config['streams'] = get_remote_config(config)
+            for i in range(3):
+                config['streams'] = get_remote_config(config)
+                if config['streams']:
+                    break
+                print 'Error: get_remote_config None'
         else:
             config['streams'] = []
             for stream_t in init_config['source']:
