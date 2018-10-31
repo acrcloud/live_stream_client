@@ -98,6 +98,7 @@ class LiveStreamWorker():
             self._download_timeout = self._config.get('download_timeout_sec', 10)
             self._open_timeout = self._config.get('open_timeout_sec', 10)
             self._is_stop = True
+            self._retry_n = 0 
             self._logger = logging.getLogger('acrcloud_stream')
 
         def run(self):
@@ -110,6 +111,7 @@ class LiveStreamWorker():
                     for stream_url in self._stream_url_list:
                         self._decode_stream(stream_url)
                         time.sleep(1)
+                        self._retry_n = self._retry_n + 1
                 except Exception as e:
                     self._logger.error(str(e))
             self._logger.info(self._stream_acrid + " DecodeStreamWorker stopped!")
@@ -125,20 +127,28 @@ class LiveStreamWorker():
                     'read_timeout_sec':self._download_timeout,
                     'is_debug':0,
                 }
-                code, msg = acrcloud_stream_decode.decode_audio(acrdict)
-                if code == 0:
-                    self._is_stop = True
-                else:
-                    self._logger.error("URL:"+str(stream_url) + ", CODE:"+str(code) + ", MSG:"+str(msg))
+                if (self._retry_n > 1 and stream_url[:4] == 'rtsp'):
+                    acrdict['extra_opt'] = {'rtsp_transport':'tcp'}
+                code, msg, ffcode, ffmsg = acrcloud_stream_decode.decode_audio(acrdict)
+                #if code == 0:
+                #    self._is_stop = True
+                #else:
+                self._logger.error("URL:"+str(stream_url) + ", CODE:"+str(code) + ", MSG:"+str(msg))
+                self._logger.error("URL:"+str(stream_url) + ", FFCODE:"+str(ffcode) + ", FFMSG:"+str(ffmsg))
             except Exception as e:
                 self._logger.error(str(e))
 
-        def _decode_callback(self, isvideo, buf):
+        def _decode_callback(self, res_data):
             try:
                 if self._is_stop:
                     return 1
-                task = (1, buf)
-                self._worker_queue.put(task)
+
+                if res_data.get('audio_data') != None:
+                    task = (1, res_data.get('audio_data'))
+                    self._logger.info("audio len:" + str(len(res_data.get('audio_data'))))
+                    self._worker_queue.put(task)
+                else:
+                    self._logger.info(str(res_data))
                 return 0
             except Exception as e:
                 self._logger.error(str(e))
