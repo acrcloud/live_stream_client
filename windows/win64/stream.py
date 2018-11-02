@@ -17,6 +17,7 @@ import socket
 import hmac
 import subprocess
 import multiprocessing
+import platform
 from xml.dom import minidom
 import acrcloud_stream_decode
 
@@ -277,7 +278,7 @@ class LiveStreamWorker():
                     if timeshift:
                         record_last_buf = record_last_buf + now_buf
                         if len(record_last_buf) > self._record_upload_interval * 16000:
-                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False)
+                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False, 50)
                             if record_fp and self._upload_record(record_fp):
                                 record_last_buf = ''
                             else:
@@ -344,10 +345,12 @@ class LiveStreamManagerProcess(multiprocessing.Process):
         self._workers = []
 
     def run(self):
-        if self._config.get('debug'):
-            init_log(logging.INFO, self._config['log_file'])
-        else:
-            init_log(logging.ERROR, self._config['log_file'])
+        platform_s = platform.system()
+        if platform_s and platform_s.lower().strip() != 'linux':
+            if self._config.get('debug'):
+                init_log(logging.INFO, self._config['log_file'])
+            else:
+                init_log(logging.ERROR, self._config['log_file'])
         self.run_worker()
         self.wait()
 
