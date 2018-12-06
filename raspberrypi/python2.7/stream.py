@@ -6,7 +6,7 @@
 # Date  : 2016/08/15
 
 import os, sys
-import json, Queue, struct, urllib, urllib2, logging
+import json, Queue, struct, urllib, urllib2, logging, logging.handlers
 import re
 import threading
 import hashlib
@@ -17,6 +17,7 @@ import socket
 import hmac
 import subprocess
 import multiprocessing
+import platform
 from xml.dom import minidom
 import acrcloud_stream_decode
 
@@ -28,34 +29,32 @@ def get_remote_config(config):
         bucket_name = config['bucket_name']
         access_key = config['access_key']
         access_secret = config['access_secret']
-	http_method = "GET"
+        http_method = "GET"
         http_uri = "/v2/buckets/"+bucket_name+"/channels"
-	items = []
-	page = 1
-	while True:
+        items = []
+        page = 1
+        while True:
             requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)
-	    req = urllib2.Request(requrl)
-	    base64string = base64.b64encode('%s:%s' % (access_key, access_secret))
-	    req.add_header("Authorization", "Basic %s" % base64string)
+            req = urllib2.Request(requrl)
+            base64string = base64.b64encode('%s:%s' % (access_key, access_secret))
+            req.add_header("Authorization", "Basic %s" % base64string)
             response = urllib2.urlopen(req)
             recv_msg = response.read()
             json_res = json.loads(recv_msg)
             logging.getLogger('acrcloud_stream').info(recv_msg)
-	    if len(json_res['items']) > 0:
-	        for one in json_res['items']:
-		    items.append(one)
-	        if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
-	    	    break	    
-		else:
-		    page = page+1
-	    else:
-		break
-	
+            if len(json_res['items']) > 0:
+                for one in json_res['items']:
+        	        items.append(one)
+                if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
+            	    break	    
+                else:
+        	        page = page+1
+            else:
+        	    break
+
         return items
     except Exception, e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
-        sys.exit(-1)
-
 
 class LiveStreamWorker():
 
@@ -96,7 +95,9 @@ class LiveStreamWorker():
             self._worker_queue = worker_queue
             self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._download_timeout = self._config.get('download_timeout_sec', 10)
+            self._open_timeout = self._config.get('open_timeout_sec', 10)
             self._is_stop = True
+            self._retry_n = 0 
             self._logger = logging.getLogger('acrcloud_stream')
 
         def run(self):
@@ -109,6 +110,7 @@ class LiveStreamWorker():
                     for stream_url in self._stream_url_list:
                         self._decode_stream(stream_url)
                         time.sleep(1)
+                        self._retry_n = self._retry_n + 1
                 except Exception as e:
                     self._logger.error(str(e))
             self._logger.info(self._stream_acrid + " DecodeStreamWorker stopped!")
@@ -120,24 +122,32 @@ class LiveStreamWorker():
                     'stream_url': stream_url,
                     'read_size_sec':self._fp_interval,
                     'program_id':self._program_id,
-                    'open_timeout_sec':self._download_timeout,
+                    'open_timeout_sec':self._open_timeout,
                     'read_timeout_sec':self._download_timeout,
                     'is_debug':0,
                 }
-                code, msg = acrcloud_stream_decode.decode_audio(acrdict)
-                if code == 0:
-                    self._is_stop = True
-                else:
-                    self._logger.error("URL:"+str(stream_url) + ", CODE:"+str(code) + ", MSG:"+str(msg))
+                if (self._retry_n > 1 and stream_url[:4] == 'rtsp'):
+                    acrdict['extra_opt'] = {'rtsp_transport':'tcp'}
+                code, msg, ffcode, ffmsg = acrcloud_stream_decode.decode_audio(acrdict)
+                #if code == 0:
+                #    self._is_stop = True
+                #else:
+                self._logger.error("URL:"+str(stream_url) + ", CODE:"+str(code) + ", MSG:"+str(msg))
+                self._logger.error("URL:"+str(stream_url) + ", FFCODE:"+str(ffcode) + ", FFMSG:"+str(ffmsg))
             except Exception as e:
                 self._logger.error(str(e))
 
-        def _decode_callback(self, isvideo, buf):
+        def _decode_callback(self, res_data):
             try:
                 if self._is_stop:
                     return 1
-                task = (1, buf)
-                self._worker_queue.put(task)
+
+                if res_data.get('audio_data') != None:
+                    task = (1, res_data.get('audio_data'))
+                    self._logger.info("audio len:" + str(len(res_data.get('audio_data'))))
+                    self._worker_queue.put(task)
+                else:
+                    self._logger.info(str(res_data))
                 return 0
             except Exception as e:
                 self._logger.error(str(e))
@@ -254,7 +264,7 @@ class LiveStreamWorker():
                     cur_buf = last_buf + now_buf
                     last_buf = cur_buf
 
-                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False)
+                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 50)
                     if fp and not self._upload(fp):
                         live_upload = False
                         if len(last_buf) > self._fp_max_time*16000:
@@ -266,7 +276,7 @@ class LiveStreamWorker():
                     if timeshift:
                         record_last_buf = record_last_buf + now_buf
                         if len(record_last_buf) > self._record_upload_interval * 16000:
-                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False)
+                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False, 50)
                             if record_fp and self._upload_record(record_fp):
                                 record_last_buf = ''
                             else:
@@ -333,10 +343,12 @@ class LiveStreamManagerProcess(multiprocessing.Process):
         self._workers = []
 
     def run(self):
-        if self._config.get('debug'):
-            init_log(logging.INFO, self._config['log_file'])
-        else:
-            init_log(logging.ERROR, self._config['log_file'])
+        platform_s = platform.system()
+        if platform_s and platform_s.lower().strip() != 'linux':
+            if self._config.get('debug'):
+                init_log(logging.INFO, self._config['log_file'])
+            else:
+                init_log(logging.ERROR, self._config['log_file'])
         self.run_worker()
         self.wait()
 
@@ -369,52 +381,58 @@ class LiveStreamClient():
 
     def start_withwatch(self):
         client_process = self._run_by_process()
-        restart_interval = int(self._config.get('restart_interval_minute', 0)) * 60
+        restart_interval = int(self._config.get('restart_interval_seconds', 0))
         check_update_interval = int(self._config.get('check_update_interval_minute', 0)) * 60
 
         watch_num = 0
 	check_update_num = 0
         self._is_stop = False
         while not self._is_stop:
-            if not self._check_alive():
-		self._check_update()
-                self._kill_process()
-                self._run_by_process()
-                watch_num = 0
-            time.sleep(5)
-            watch_num = watch_num + 5
-	    check_update_num = check_update_num + 5 
-            if restart_interval > 0 and watch_num >= restart_interval:
-		self._check_update()
-                self._kill_process()
-                self._run_by_process()
-                watch_num = 0
-	    if check_update_interval > 0 and check_update_num > check_update_interval:
-		if self._check_update():
-		    self._kill_process()
-		    self._run_by_process()
-		check_update_num = 0
+            try:
+                if not self._check_alive():
+	            self._check_update()
+                    self._kill_process()
+                    self._run_by_process()
+                    watch_num = 0
+                time.sleep(5)
+                watch_num = watch_num + 5
+	        check_update_num = check_update_num + 5 
+                if restart_interval > 0 and watch_num >= restart_interval:
+	            self._check_update()
+                    self._kill_process()
+                    self._run_by_process()
+                    watch_num = 0
+	        if check_update_interval > 0 and check_update_num > check_update_interval:
+	            if self._check_update():
+	                self._kill_process()
+	                self._run_by_process()
+	            check_update_num = 0
+            except Exception, e:
+                self._logger.error(str(e))
 
     def _check_update(self):
-	streams = get_remote_config(self._config)
-	update = False
-	d = {}
-	for s in self._config['streams']:
-	    d[s['id']] = s
-	for s in streams:
-	    if not d.has_key(s['id']):
-		update = True
-		self._config['streams'] = streams
-		break
-	    else:
-		if d[s['id']]['live_host'] != s['live_host'] or d[s['id']]['live_port'] != s['live_port'] \
-		        or d[s['id']]['timeshift_host'] != s['timeshift_host'] or d[s['id']]['timeshift_port'] != s['timeshift_port'] \
-			or d[s['id']]['url'] != s['url'] or d[s['id']]['timeshift'] != s['timeshift']:
-		    update = True
-		    self._config['streams'] = streams
-		    break
-	print (update, streams)
-	return update
+        try:
+	    streams = get_remote_config(self._config)
+	    update = False
+	    d = {}
+	    for s in self._config['streams']:
+	        d[s['id']] = s
+	    for s in streams:
+	        if not d.has_key(s['id']):
+	    	    update = True
+	    	    self._config['streams'] = streams
+	    	    break
+	        else:
+	    	    if d[s['id']]['live_host'] != s['live_host'] or d[s['id']]['live_port'] != s['live_port'] \
+	    	            or d[s['id']]['timeshift_host'] != s['timeshift_host'] or d[s['id']]['timeshift_port'] != s['timeshift_port'] \
+	    	            or d[s['id']]['url'] != s['url'] or d[s['id']]['timeshift'] != s['timeshift']:
+	    	        update = True
+	    	        self._config['streams'] = streams
+	    	        break
+	    print (update, streams)
+	    return update
+        except Exception, e:
+            self._logger.error(str(e))
 		    
     def _run_single(self):
         client_process = LiveStreamManagerProcess(self._config['streams'], self._config)
@@ -455,7 +473,7 @@ def init_log(logging_level, log_file):
         logger1 = logging.getLogger('acrcloud_stream')
         logger1.setLevel(logging_level)
         if log_file.strip():
-            acrcloud_stream = logging.FileHandler(log_file)
+            acrcloud_stream = logging.handlers.RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=1)
             acrcloud_stream.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'))
             acrcloud_stream.setLevel(logging_level)
             logger1.addHandler(acrcloud_stream)
@@ -490,15 +508,21 @@ def parse_config():
         config['access_key'] = init_config['console_access_key']
         config['access_secret'] = init_config['console_access_secret']
         config['remote'] = init_config.get('remote')
-        config['restart_interval_minute'] = init_config.get('restart_interval_minute', 0)
+        config['restart_interval_seconds'] = init_config.get('restart_interval_seconds', 0)
         config['check_update_interval_minute'] = init_config.get('check_update_interval_minute', 0)
         config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
         config['bucket_name'] = init_config.get('bucket_name')
         config['record_upload'] = init_config.get('record_upload')
         config['record_upload_interval'] = init_config.get('record_upload_interval')
+        config['download_timeout_sec'] = init_config.get('download_timeout_sec', 10)
+        config['open_timeout_sec'] = init_config.get('open_timeout_sec', 10)
         if init_config.get('remote'):
-            config['streams'] = get_remote_config(config)
+            for i in range(3):
+                config['streams'] = get_remote_config(config)
+                if config['streams']:
+                    break
+                print 'Error: get_remote_config None'
         else:
             config['streams'] = []
             for stream_t in init_config['source']:
