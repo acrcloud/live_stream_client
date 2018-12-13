@@ -6,7 +6,7 @@
 # Date  : 2016/08/15
 
 import os, sys
-import json, Queue, struct, urllib, urllib2, logging
+import json, Queue, struct, urllib, urllib2, logging, logging.handlers
 import re
 import threading
 import hashlib
@@ -35,6 +35,8 @@ def get_remote_config(config):
 	page = 1
 	while True:
             requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)
+            if "stream_ids" in config and len(config['stream_ids']) > 0:
+                requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)+"&streams="+",".join(str(x) for x in config['stream_ids'])
 	    req = urllib2.Request(requrl)
 	    base64string = base64.b64encode('%s:%s' % (access_key, access_secret))
 	    req.add_header("Authorization", "Basic %s" % base64string)
@@ -475,7 +477,7 @@ def init_log(logging_level, log_file):
         logger1 = logging.getLogger('acrcloud_stream')
         logger1.setLevel(logging_level)
         if log_file.strip():
-            acrcloud_stream = logging.FileHandler(log_file)
+            acrcloud_stream = logging.handlers.RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=1)
             acrcloud_stream.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'))
             acrcloud_stream.setLevel(logging_level)
             logger1.addHandler(acrcloud_stream)
@@ -519,6 +521,7 @@ def parse_config():
         config['record_upload_interval'] = init_config.get('record_upload_interval')
         config['download_timeout_sec'] = init_config.get('download_timeout_sec', 10)
         config['open_timeout_sec'] = init_config.get('open_timeout_sec', 10)
+        config['stream_ids'] = init_config.get('stream_ids', [])
         if init_config.get('remote'):
             for i in range(3):
                 config['streams'] = get_remote_config(config)

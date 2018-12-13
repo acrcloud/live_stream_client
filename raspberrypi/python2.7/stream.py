@@ -29,32 +29,36 @@ def get_remote_config(config):
         bucket_name = config['bucket_name']
         access_key = config['access_key']
         access_secret = config['access_secret']
-        http_method = "GET"
+	http_method = "GET"
         http_uri = "/v2/buckets/"+bucket_name+"/channels"
-        items = []
-        page = 1
-        while True:
+	items = []
+	page = 1
+	while True:
             requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)
-            req = urllib2.Request(requrl)
-            base64string = base64.b64encode('%s:%s' % (access_key, access_secret))
-            req.add_header("Authorization", "Basic %s" % base64string)
+            if "stream_ids" in config and len(config['stream_ids']) > 0:
+                requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)+"&streams="+",".join(str(x) for x in config['stream_ids'])
+	    req = urllib2.Request(requrl)
+	    base64string = base64.b64encode('%s:%s' % (access_key, access_secret))
+	    req.add_header("Authorization", "Basic %s" % base64string)
             response = urllib2.urlopen(req)
             recv_msg = response.read()
             json_res = json.loads(recv_msg)
             logging.getLogger('acrcloud_stream').info(recv_msg)
-            if len(json_res['items']) > 0:
-                for one in json_res['items']:
-        	        items.append(one)
-                if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
-            	    break	    
-                else:
-        	        page = page+1
-            else:
-        	    break
-
+	    if len(json_res['items']) > 0:
+	        for one in json_res['items']:
+		    items.append(one)
+	        if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
+	    	    break	    
+		else:
+		    page = page+1
+	    else:
+		break
+	
         return items
     except Exception, e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
+        #sys.exit(-1)
+
 
 class LiveStreamWorker():
 
@@ -517,6 +521,7 @@ def parse_config():
         config['record_upload_interval'] = init_config.get('record_upload_interval')
         config['download_timeout_sec'] = init_config.get('download_timeout_sec', 10)
         config['open_timeout_sec'] = init_config.get('open_timeout_sec', 10)
+        config['stream_ids'] = init_config.get('stream_ids', [])
         if init_config.get('remote'):
             for i in range(3):
                 config['streams'] = get_remote_config(config)
