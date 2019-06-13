@@ -103,6 +103,8 @@ class LiveStreamWorker():
             self._is_stop = True
             self._retry_n = 0 
             self._logger = logging.getLogger('acrcloud_stream')
+            self._current_time = round(time.time())
+            self._time_update_point = 0
 
         def run(self):
             self._is_stop = False
@@ -147,7 +149,13 @@ class LiveStreamWorker():
                     return 1
 
                 if res_data.get('audio_data') != None:
-                    task = (1, res_data.get('audio_data'))
+                    data_secs = round(res_data.get('audio_data')/16000)
+                    self._current_time = self._current_time + data_secs
+                    self._time_update_point = self._time_update_point + data_secs
+                    if self._time_update_point > 10:
+                        self._current_time = round(time.time())
+                        self._time_update_point = 0
+                    task = (1, res_data.get('audio_data'), self._current_time)
                     self._logger.info("audio len:" + str(len(res_data.get('audio_data'))))
                     self._worker_queue.put(task)
                 else:
@@ -262,7 +270,7 @@ class LiveStreamWorker():
                 try:
                     live_upload = True
                     task = self._worker_queue.get()
-                    task_type, now_buf = task
+                    task_type, now_buf, ts = task
                     if task_type == 2:
                         self._stream_info = now_buf 
                     cur_buf = last_buf + now_buf
@@ -281,7 +289,7 @@ class LiveStreamWorker():
                         record_last_buf = record_last_buf + now_buf
                         if len(record_last_buf) > self._record_upload_interval * 16000:
                             record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False, 50)
-                            if record_fp and self._upload_record(record_fp):
+                            if record_fp and self._upload_record(record_fp, ts):
                                 record_last_buf = ''
                             else:
                                 if len(record_last_buf) > self._record_fp_max_time * 16000:
@@ -312,11 +320,11 @@ class LiveStreamWorker():
                 self._logger.error(acr_id + ":" + str(len(fp)) + ":" + str(e))
 
             return result
-        def _upload_record(self, fp):
+        def _upload_record(self, fp, ts):
             result = True
             acr_id = self._stream_info['acr_id']
             stream_id = self._stream_info['id']
-            timestamp = int(time.time())
+            timestamp = ts
             detail = str(stream_id)+":"+str(timestamp)
             try:
                 host = self._stream_info['timeshift_host']
