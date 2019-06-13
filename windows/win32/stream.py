@@ -17,6 +17,7 @@ import socket
 import hmac
 import subprocess
 import multiprocessing
+import traceback
 import platform
 from xml.dom import minidom
 import acrcloud_stream_decode
@@ -149,7 +150,7 @@ class LiveStreamWorker():
                     return 1
 
                 if res_data.get('audio_data') != None:
-                    data_secs = round(res_data.get('audio_data')/16000)
+                    data_secs = round(float(len(res_data.get('audio_data')))/16000, 2)
                     self._current_time = self._current_time + data_secs
                     self._time_update_point = self._time_update_point + data_secs
                     if self._time_update_point > 10:
@@ -162,6 +163,7 @@ class LiveStreamWorker():
                     self._logger.info(str(res_data))
                 return 0
             except Exception as e:
+                traceback.print_exc()
                 self._logger.error(str(e))
         
         def _check_url(self):
@@ -324,7 +326,7 @@ class LiveStreamWorker():
             result = True
             acr_id = self._stream_info['acr_id']
             stream_id = self._stream_info['id']
-            timestamp = ts
+            timestamp = int(ts)
             detail = str(stream_id)+":"+str(timestamp)
             try:
                 host = self._stream_info['timeshift_host']
