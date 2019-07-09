@@ -295,7 +295,7 @@ class LiveStreamWorker():
                                 record_last_buf = ''
                             else:
                                 if len(record_last_buf) > self._record_fp_max_time * 16000:
-                                    record_last_buf = record_last_buf[len(last_buf)-self._record_fp_max_time*16000:]
+                                    record_last_buf = record_last_buf[len(record_last_buf)-self._record_fp_max_time*16000:]
 
                 except Exception as e:
                     self._logger.error(str(e))
