@@ -47,15 +47,15 @@ def get_remote_config(config):
             logging.getLogger('acrcloud_stream').info(recv_msg)
             if len(json_res['items']) > 0:
                 for one in json_res['items']:
-        	        items.append(one)
+                    items.append(one)
                 if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
-            	    break	    
+                    break 
                 else:
                     page = page+1
             else:
                 break
         return items
-    except Exception, e:
+    except Exception as e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
         #sys.exit(-1)
 
@@ -235,7 +235,7 @@ class LiveStreamWorker():
                         result = resp.read()
                         resp.close()
                         return result
-                except Exception, e:
+                except Exception as e:
                     self._logger.error(str(e))
                     if resp:
                         resp.close()
@@ -353,6 +353,7 @@ class LiveStreamManagerProcess(multiprocessing.Process):
         self._streams = streams
         self._config = config
         self._workers = []
+        self._logger = logging.getLogger('acrcloud_stream')
 
     def run(self):
         platform_s = platform.system()
@@ -397,55 +398,55 @@ class LiveStreamClient():
         check_update_interval = int(self._config.get('check_update_interval_minute', 0)) * 60
 
         watch_num = 0
-	check_update_num = 0
+        check_update_num = 0
         self._is_stop = False
         while not self._is_stop:
             try:
                 if not self._check_alive():
-	            self._check_update()
+                    self._check_update()
                     self._kill_process()
                     self._run_by_process()
                     watch_num = 0
                 time.sleep(5)
                 watch_num = watch_num + 5
-	        check_update_num = check_update_num + 5 
+                check_update_num = check_update_num + 5 
                 if restart_interval > 0 and watch_num >= restart_interval:
-	            self._check_update()
+                    self._check_update()
                     self._kill_process()
                     self._run_by_process()
                     watch_num = 0
-	        if check_update_interval > 0 and check_update_num > check_update_interval:
-	            if self._check_update():
-	                self._kill_process()
-	                self._run_by_process()
-	            check_update_num = 0
-            except Exception, e:
+                if check_update_interval > 0 and check_update_num > check_update_interval:
+                    if self._check_update():
+                        self._kill_process()
+                        self._run_by_process()
+                        check_update_num = 0
+            except Exception as e:
                 self._logger.error(str(e))
 
     def _check_update(self):
         try:
-	    streams = get_remote_config(self._config)
-	    update = False
-	    d = {}
-	    for s in self._config['streams']:
-	        d[s['id']] = s
-	    for s in streams:
-	        if not d.has_key(s['id']):
-	    	    update = True
-	    	    self._config['streams'] = streams
-	    	    break
-	        else:
-	    	    if d[s['id']]['live_host'] != s['live_host'] or d[s['id']]['live_port'] != s['live_port'] \
-	    	            or d[s['id']]['timeshift_host'] != s['timeshift_host'] or d[s['id']]['timeshift_port'] != s['timeshift_port'] \
-	    	            or d[s['id']]['url'] != s['url'] or d[s['id']]['timeshift'] != s['timeshift']:
-	    	        update = True
-	    	        self._config['streams'] = streams
-	    	        break
-	    print (update, streams)
-	    return update
-        except Exception, e:
+            streams = get_remote_config(self._config)
+            update = False
+            d = {}
+            for s in self._config['streams']:
+                d[s['id']] = s
+            for s in streams:
+                if not d.has_key(s['id']):
+                    update = True
+                    self._config['streams'] = streams
+                    break
+                else:
+                    if d[s['id']]['live_host'] != s['live_host'] or d[s['id']]['live_port'] != s['live_port'] \
+                            or d[s['id']]['timeshift_host'] != s['timeshift_host'] or d[s['id']]['timeshift_port'] != s['timeshift_port'] \
+                            or d[s['id']]['url'] != s['url'] or d[s['id']]['timeshift'] != s['timeshift']:
+                        update = True
+                        self._config['streams'] = streams
+                        break
+            print (update, streams)
+            return update
+        except Exception as e:
             self._logger.error(str(e))
-		    
+
     def _run_single(self):
         client_process = LiveStreamManagerProcess(self._config['streams'], self._config)
         client_process.run_worker()
@@ -467,7 +468,7 @@ class LiveStreamClient():
                 if not mp.is_alive():
                     res = False
                     break
-        except Exception, e:
+        except Exception as e:
             self._logger.error(str(e))
         return res
 
@@ -477,7 +478,7 @@ class LiveStreamClient():
             for mp in self._manager_process:
                 mp.terminate()
                 mp.join()
-        except Exception, e:
+        except Exception as e:
             self._logger.error(str(e))
 
 def init_log(logging_level, log_file):
@@ -495,7 +496,7 @@ def init_log(logging_level, log_file):
             ch.setLevel(logging_level)
             logger1.addHandler(ch)
         return logger1
-    except Exception, e:
+    except Exception as e:
         print str(e)
         sys.exit(-1)
 
@@ -545,7 +546,7 @@ def parse_config():
                 tmp_stream_info['host'] = init_config['server']['host']
                 tmp_stream_info['port'] = init_config['server']['port']
                 config['streams'].append(tmp_stream_info)
-    except Exception, e:
+    except Exception as e:
         print "Error: Load ./client.conf failed." + str(e)
         sys.exit(1)
     return config
