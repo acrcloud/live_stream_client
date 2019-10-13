@@ -55,7 +55,7 @@ def get_remote_config(config):
             else:
                 break
         return items
-    except Exception, e:
+    except Exception as e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
         #sys.exit(-1)
 
@@ -235,7 +235,7 @@ class LiveStreamWorker():
                         result = resp.read()
                         resp.close()
                         return result
-                except Exception, e:
+                except Exception as e:
                     self._logger.error(str(e))
                     if resp:
                         resp.close()
@@ -419,7 +419,7 @@ class LiveStreamClient():
 	                self._kill_process()
 	                self._run_by_process()
 	            check_update_num = 0
-            except Exception, e:
+            except Exception as e:
                 self._logger.error(str(e))
 
     def _check_update(self):
@@ -443,7 +443,7 @@ class LiveStreamClient():
 	    	        break
 	    print (update, streams)
 	    return update
-        except Exception, e:
+        except Exception as e:
             self._logger.error(str(e))
 		    
     def _run_single(self):
@@ -467,7 +467,7 @@ class LiveStreamClient():
                 if not mp.is_alive():
                     res = False
                     break
-        except Exception, e:
+        except Exception as e:
             self._logger.error(str(e))
         return res
 
@@ -477,7 +477,7 @@ class LiveStreamClient():
             for mp in self._manager_process:
                 mp.terminate()
                 mp.join()
-        except Exception, e:
+        except Exception as e:
             self._logger.error(str(e))
 
 def init_log(logging_level, log_file):
@@ -495,7 +495,7 @@ def init_log(logging_level, log_file):
             ch.setLevel(logging_level)
             logger1.addHandler(ch)
         return logger1
-    except Exception, e:
+    except Exception as e:
         print str(e)
         sys.exit(-1)
 
@@ -545,7 +545,7 @@ def parse_config():
                 tmp_stream_info['host'] = init_config['server']['host']
                 tmp_stream_info['port'] = init_config['server']['port']
                 config['streams'].append(tmp_stream_info)
-    except Exception, e:
+    except Exception as e:
         print "Error: Load ./client.conf failed." + str(e)
         sys.exit(1)
     return config
