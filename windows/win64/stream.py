@@ -353,9 +353,9 @@ class LiveStreamManagerProcess(multiprocessing.Process):
         self._streams = streams
         self._config = config
         self._workers = []
-        self._logger = logging.getLogger('acrcloud_stream')
 
     def run(self):
+        self._logger = logging.getLogger('acrcloud_stream')
         platform_s = platform.system()
         if platform_s and platform_s.lower().strip() != 'linux':
             if self._config.get('debug'):
@@ -366,6 +366,7 @@ class LiveStreamManagerProcess(multiprocessing.Process):
         self.wait()
 
     def run_worker(self):
+        self._logger = logging.getLogger('acrcloud_stream')
         try:
             for stream_t in self._streams:
                 worker = LiveStreamWorker(stream_t, self._config)
