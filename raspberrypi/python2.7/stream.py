@@ -131,6 +131,7 @@ class LiveStreamWorker():
                     'program_id':self._program_id,
                     'open_timeout_sec':self._open_timeout,
                     'read_timeout_sec':self._download_timeout,
+                    'extra_opt': {'sample_rate': '44100', 'channels': '1'},
                     'is_debug':0,
                 }
                 if (self._retry_n > 1 and stream_url[:4] == 'rtsp'):
