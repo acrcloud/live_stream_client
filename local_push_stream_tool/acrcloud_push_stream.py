@@ -102,7 +102,18 @@ class StreamPushClient():
             push_server = stream_info['user_defined']['push_server']
             config_info = self._config['config']
             push_tool = config_info['system']['push_tool']
-            cmd = [push_tool, '-loglevel', 'quiet', '-re', '-i', stream_info['url'], '-c:a', 'aac']
+            stream_url = stream_info['url'].strip()
+            is_device = False
+            if stream_url.startswith('plughw'):
+                is_device = True
+                ss = stream_url.find('?')
+                if ss > 0:
+                    stream_url = stream_url[:ss]
+            #cmd = [push_tool, '-loglevel', 'quiet', '-re', '-i', stream_url, '-c:a', 'aac']
+            cmd = [push_tool, '-loglevel', 'quiet', '-re']
+            if is_device:
+                cmd += ['-f', 'alsa']
+            cmd += ['-i', stream_url, '-c:a', 'aac']
             params_keys = [['-ar', 'sample_rate'], ['-ac', 'channels'], ['-b:a', 'bitrate']]
             for pk in params_keys:
                 if config_info['audio'][pk[1]]:
