@@ -170,6 +170,9 @@ class StreamPushClient():
             account_access_key = str(self._config['config']['api']['account_access_key'])
             account_access_secret = str(self._config['config']['api']['account_access_secret'])
             project_name = self._config['config']['api']['project_name']
+            stream_ids = self._config['config']['api']['stream_ids']
+            if stream_ids:
+                stream_ids = stream_ids.split(',')
             http_method = 'GET'
             http_uri = surl[surl.find("/v1/"):]
             signature_version = '1'
@@ -207,6 +210,8 @@ class StreamPushClient():
                 json_res = json.loads(s_info)
                 if len(json_res['items']) > 0:
                     for one in json_res['items']:
+                        if stream_ids and one['id'] not in stream_ids:
+                            continue
                         streams.append(one)
                     if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
                         break
@@ -283,6 +288,7 @@ def parse_config():
         config['api']['account_access_secret'] = cf.get('api', 'account_access_secret')
         config['api']['url'] = cf.get('api', 'url')
         config['api']['project_name'] = cf.get('api', 'project_name')
+        config['api']['stream_ids'] = cf.get('api', 'stream_ids')
 
         config['log']['level'] = cf.get('log', 'level')
         if config['log']['level']:
