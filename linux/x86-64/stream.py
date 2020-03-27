@@ -58,7 +58,8 @@ def get_remote_config(config):
     except Exception as e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
         #sys.exit(-1)
-
+        return []
+    
 class LiveStreamWorker():
 
     def __init__(self, stream_info, config):
