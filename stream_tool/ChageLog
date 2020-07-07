@@ -1,3 +1,7 @@
+20200707 v1.0.1
+	MD5 (acrcloud_stream_decode.so) = 74d9dc21cf4e7fd68037658d22957e2d
+    Update the Default of "probesize"(500k)
+
 20200701 v1.0.0
 	MD5 (acrcloud_stream_decode.so) = 38401ca60c47238ab558f5dcad8700a2
     gnutls https extr(400,0.3)
