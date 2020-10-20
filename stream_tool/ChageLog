@@ -1,3 +1,8 @@
+20200707 v1.0.2
+	MD5 (acrcloud_stream_decode.so) = 74d9dc21cf4e7fd68037658d22957e2d
+    MD5 (acrcloud_stream_decode_arm.so) = f01acc4e1be5767bbc440d8235a7e394
+    ccode > 4.2.4
+
 20200707 v1.0.1
 	MD5 (acrcloud_stream_decode.so) = 74d9dc21cf4e7fd68037658d22957e2d
     Update the Default of "probesize"(500k)
