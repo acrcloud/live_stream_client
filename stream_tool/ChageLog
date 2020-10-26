@@ -1,5 +1,5 @@
 20201026 v1.0.3
-	MD5 (acrcloud_stream_decode.so) = 74d9dc21cf4e7fd68037658d22957e2d
+	MD5 (acrcloud_stream_decode.so) = c2a0e276a7a76ba432b05ed875019ba5
     MD5 (acrcloud_stream_decode_arm.so) = 868e2d8a5eba701f060f26c411235197
     Fixed cmd_f bug
 
