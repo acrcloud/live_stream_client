@@ -1,3 +1,8 @@
+20201105 v1.0.5
+    MD5 (acrcloud_stream_decode.so) = 77235ae4cda37edf052908f423e8ba6f
+    MD5 (acrcloud_stream_decode_arm.so) = cc4534060134f12afe332eac9b53ce13
+    Change sample rate dynamically
+
 20201026 v1.0.4
 	MD5 (acrcloud_stream_decode.so) = d6ba070f18300cbb99bac6065328e6bc
     MD5 (acrcloud_stream_decode_arm.so) = 868e2d8a5eba701f060f26c411235197
