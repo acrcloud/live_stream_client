@@ -1,3 +1,8 @@
+20201223 v1.0.6
+    MD5 (acrcloud_stream_decode.so) = 22e0f889d807d78a47fbc46783c4b7c4
+    MD5 (acrcloud_stream_decode_arm.so) = 998edc7a9985dc03ccd1d4fef738f7e7
+    Fix block bug
+
 20201105 v1.0.5
     MD5 (acrcloud_stream_decode.so) = 77235ae4cda37edf052908f423e8ba6f
     MD5 (acrcloud_stream_decode_arm.so) = cc4534060134f12afe332eac9b53ce13
