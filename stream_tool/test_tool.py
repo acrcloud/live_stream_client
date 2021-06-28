@@ -46,7 +46,7 @@ class DecodeStreamWorker(threading.Thread):
                 #'out_video_fps': 8,
                 #'out_video_bitrate': 50000,
                 #'out_video_width': 250,
-                #'threads': 2,
+                #'threads': 1,
             }
             code, msg, ff_code, ff_msg = acrcloud_stream_tool.decode_audio(acrdict)
             if code == 0:
@@ -83,9 +83,10 @@ def enc(pcm_buffer):
     abuf = encoder.read_all()
     return abuf
 
-def mix(vbuf, abuf)
-    mp4buf = acrcloud_stream_tool.av_mix(vbuf, abuf)
-    return mp4buf
+def mix(abuf, vbuf)
+    muxer = acrcloud_stream_tool.Muxer()
+    muxer.write(abuf, vbuf)
+    return muxer.read_all()
 
 if __name__ == '__main__':
     recognize_queue = Queue.Queue()

@@ -1,3 +1,8 @@
+20210519 v2.0.0
+    MD5 (acrcloud_stream_tool.so) = bd853750ea66db7e5b4a7488dbcace78
+    MD5 (acrcloud_stream_tool_arm.so) = aeec458fac81592ab8ad59e46ba2da25
+    Stream Tool v2.0, change muxer api
+
 20210519 v1.0.0
     MD5 (acrcloud_stream_tool.so) = ad0efd224cb143448b7147b737dd7106
     MD5 (acrcloud_stream_tool_arm.so) = fad315ae38a5b611d71e5df51d42e470
