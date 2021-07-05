@@ -1,3 +1,8 @@
+20210519 v2.0.2
+    MD5 (acrcloud_stream_tool.so) = d48d17cc6529f56e40ab3ff58c1ecefe
+    MD5 (acrcloud_stream_tool_arm.so) = ac884ad6d6aeec9f681b3271716b7da1
+    when is_return_video=1, decode audio stream bug
+
 20210519 v2.0.1
     MD5 (acrcloud_stream_tool.so) = 08f4905804f3f1ff28051d36b961d372
     MD5 (acrcloud_stream_tool_arm.so) = 513217dad031731dd8719f5f37ca856f
