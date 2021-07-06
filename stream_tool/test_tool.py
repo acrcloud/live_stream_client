@@ -69,19 +69,49 @@ class DecodeStreamWorker(threading.Thread):
         except Exception as e:
             print e
 
-def enc(pcm_buffer):
+def enc(pcm_buffer, atype='aac', is_strip=False):
     opt = {
         'sample_rate': 8000,
         'channels': 1,
         'bit_rate': 16*1024,
-        'type': 'aac'
+        'type': atype
     }
+    if is_strip:
+        opt['is_strip'] = 1
     encoder = acrcloud_stream_tool.Encoder(opt)
-    #for i in range(0, len(pcm_buffer), 1024):
-    #    encoder.write(pcm_buffer[i:i+1024])
     encoder.write(pcm_buffer)
     abuf = encoder.read_all()
     return abuf
+
+def get_enc_block_size(atype='aac'):
+    opt = {
+        'sample_rate': 8000,
+        'channels': 1,
+        'bit_rate': 16*1024,
+        'is_strip': 1,
+        'type': atype
+    }
+    encoder = acrcloud_stream_tool.Encoder(opt)
+    return encoder.get_frame_size() * 2
+
+def mix_list(list_files):
+    muxer = acrcloud_stream_tool.Muxer()
+
+    block_size = get_enc_block_size()
+    last_buf = '\0'*block_size
+    for pcm_file,h264_file in list_files:
+        pcm_buffer_now = open(pcm_file, 'rb').read()
+        pcm_buffer_a = last_buf + pcm_buffer_now
+        ss = len(pcm_buffer_a) // block_size
+        pcm_buffer = pcm_buffer_a[:ss*block_size]
+        last_buf = pcm_buffer_a[(ss-1)*block_size:]
+        aacbuf = enc(pcm_buffer, 'aac', True)
+        h264buf = open(h264_file, 'rb').read()
+        muxer.write(aacbuf, h264buf)
+    mp4buf = muxer.read_all()
+    out = open(list_file+ ".mp4", 'wb')
+    out.write(mp4buf)
+    out.close()
 
 def mix(abuf, vbuf)
     muxer = acrcloud_stream_tool.Muxer()
