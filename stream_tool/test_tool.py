@@ -118,6 +118,10 @@ def mix(abuf, vbuf)
     muxer.write(abuf, vbuf)
     return muxer.read_all()
 
+def resample(src_buf, src_rate, dst_rate):
+    dst_buf = acrcloud_stream_tool.resample(src_buf, src_rate, dst_rate)
+    return dst_buf
+
 if __name__ == '__main__':
     recognize_queue = Queue.Queue()
     workers = []
