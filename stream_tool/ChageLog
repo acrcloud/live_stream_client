@@ -1,3 +1,8 @@
+20210719 v2.0.5
+    MD5 (acrcloud_stream_tool.so) = 0c2814b75a7c024daf1a45530eea7213
+    MD5 (acrcloud_stream_tool_arm.so) = 12837c71253144e098e03724c62b383b
+    malloc bug.
+
 20210715 v2.0.4
     MD5 (acrcloud_stream_tool.so) = 41c8b5d1a656eb927c050ba490b893df
     MD5 (acrcloud_stream_tool_arm.so) = 2326fce92b88758942b57d27b584d619
