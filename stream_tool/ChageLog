@@ -1,3 +1,8 @@
+20210720 v2.0.7
+    MD5 (acrcloud_stream_tool.so) = 4977bd3b4a05103af6273b9cd07656f9
+    MD5 (acrcloud_stream_tool_arm.so) = 42b281a08d53559d057c1b11c20e46c0
+    code >> 4.4, add some mem checkpoints.
+
 20210719 v2.0.6
     MD5 (acrcloud_stream_tool.so) = 0c2814b75a7c024daf1a45530eea7213
     MD5 (acrcloud_stream_tool_arm.so) = 2cbd1a1a9367053f00068a82a3595efa
