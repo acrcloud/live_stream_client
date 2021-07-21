@@ -1,3 +1,8 @@
+20210721 v2.0.8
+    MD5 (acrcloud_stream_tool.so) = fec9c1342c2d2782cede8db3c6f75134
+    MD5 (acrcloud_stream_tool_arm.so) = 3e97797fcc1d9563cb340360b8a9ac69
+    fix memory leak bug.
+
 20210720 v2.0.7
     MD5 (acrcloud_stream_tool.so) = 4977bd3b4a05103af6273b9cd07656f9
     MD5 (acrcloud_stream_tool_arm.so) = 42b281a08d53559d057c1b11c20e46c0
