@@ -1,3 +1,8 @@
+20210727 v2.0.10
+    MD5 (acrcloud_stream_tool.so) = 169298d171b87ce4b3b01a96d333f6c6
+    MD5 (acrcloud_stream_tool_arm.so) = 86b0d3c7d85e86abeb31b308bc8526f7
+    support glibc >= 2.12.
+
 20210722 v2.0.9
     MD5 (acrcloud_stream_tool.so) = d10421fa5955d0dcfa8b0cb5500caa4a
     MD5 (acrcloud_stream_tool_arm.so) = 86b0d3c7d85e86abeb31b308bc8526f7
