@@ -237,7 +237,7 @@ class StreamPushClient():
                 self._logger.debug(json.dumps(json_res))
                 if len(json_res['data']) > 0:
                     for one in json_res['data']:
-                        if stream_ids and one['id'] not in stream_ids:
+                        if stream_ids and one['stream_id'] not in stream_ids:
                             continue
                         streams.append(one)
                     if json_res['meta']['current_page'] >= json_res['meta']['total']:
