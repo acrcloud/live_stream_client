@@ -1,3 +1,9 @@
+20211206 v2.0.13
+    MD5 (ChageLog) = 79cc88401f48b448ff1f7df5fe588e69
+    MD5 (acrcloud_stream_tool.so) = ca2629a6777a3328f332aa657f274118
+    MD5 (acrcloud_stream_tool_arm.so) = 8f3df060dde681762a6b4119fda794d7
+    memory leak & crash.
+
 20210809 v2.0.12
     MD5 (acrcloud_stream_tool.so) = 193e7b3d1a72f0f65d4cf567ebdf8540
     MD5 (acrcloud_stream_tool_arm.so) = 6565c0e11382091959dfaf2c6fec5654
