@@ -1,3 +1,8 @@
+20211216 v2.0.15
+    MD5 (acrcloud_stream_tool.so) = cd09837d3d3c27be7f6628fe5095f5ef
+    MD5 (acrcloud_stream_tool_arm.so) = 652bc809db65de0288a6030e8cda984e
+    fixed channels num bug.
+
 20211209 v2.0.14
     MD5 (acrcloud_stream_tool.so) = 4f2fc1a305c91cbd02e5515b00510f15
     MD5 (acrcloud_stream_tool_arm.so) = c6f38c717c1c28924c8104a4ab2d791e
