@@ -276,7 +276,7 @@ class LiveStreamWorker():
                     cur_buf = last_buf + now_buf
                     last_buf = cur_buf
 
-                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 50)
+                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 0, 0)
                     if fp and not self._upload(fp):
                         live_upload = False
                         if len(last_buf) > self._fp_max_time*16000:
@@ -288,7 +288,7 @@ class LiveStreamWorker():
                     if timeshift:
                         record_last_buf = record_last_buf + now_buf
                         if len(record_last_buf) > self._record_upload_interval * 16000:
-                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False, 50)
+                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False, 0, 0)
                             if record_fp and self._upload_record(record_fp, ts):
                                 record_last_buf = ''
                             else:
