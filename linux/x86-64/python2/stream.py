@@ -432,7 +432,7 @@ class LiveStreamClient():
             for s in self._config['streams']:
                 d[s['id']] = s
             for s in streams:
-                if not d.has_key(s['id']):
+                if s['id'] not in d:
                     update = True
                     self._config['streams'] = streams
                     break
