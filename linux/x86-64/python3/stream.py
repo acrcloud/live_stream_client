@@ -268,7 +268,7 @@ class LiveStreamWorker():
                     last_buf = cur_buf
 
                     fp = acrcloud_stream_tool.create_fingerprint(cur_buf, False, 50, 0)
-                    if fp and not self._upload(fp):
+                    if fp and not self._upload_ts(fp):
                         live_upload = False
                         if len(last_buf) > self._fp_max_time*16000:
                             last_buf = last_buf[len(last_buf)-self._fp_max_time*16000:]
@@ -289,6 +289,32 @@ class LiveStreamWorker():
                 except Exception as e:
                     self._logger.error(str(e))
             self._logger.info(acr_id + " ProcessFingerprintWorker stopped!")
+
+        def _upload_ts(self, fp):
+            result = True
+            acr_id = self._stream_info['acr_id']
+            stream_id = self._stream_info['id']
+            timestamp = int(time.time()*1000)
+            detail = str(stream_id)+":"+str(timestamp)
+            try:
+                host = self._stream_info['live_host']
+                port = self._stream_info['live_port']
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(self._upload_timeout)
+                sign = acr_id + (32-len(acr_id))*chr(0)
+                body = sign.encode('ascii') +struct.pack('I', len(detail)) + detail.encode('ascii') + fp
+                header = struct.pack('!cBBBIB', b'M', 1, 24, 0, len(body)+1, 2)
+                sock.connect((host, int(port)))
+                sock.sendall(header+body)
+                row = struct.unpack('!ii', sock.recv(8))
+                res_ret = sock.recv(row[1])
+                self._logger.info(acr_id + ":record:" + str(len(fp)) + ":" + detail+":"+ res_ret.decode('ascii'))
+                sock.close()
+            except Exception as e:
+                result = False
+                self._logger.error(acr_id + ":record:" + str(len(fp)) + ":" + str(e))
+
+            return result
 
         def _upload(self, fp):
             result = True

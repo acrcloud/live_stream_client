@@ -58,7 +58,8 @@ def get_remote_config(config):
     except Exception as e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
         #sys.exit(-1)
-
+        return []
+    
 class LiveStreamWorker():
 
     def __init__(self, stream_info, config):
@@ -276,8 +277,8 @@ class LiveStreamWorker():
                     cur_buf = last_buf + now_buf
                     last_buf = cur_buf
 
-                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 0, 0)
-                    if fp and not self._upload(fp):
+                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 50, 0)
+                    if fp and not self._upload_ts(fp):
                         live_upload = False
                         if len(last_buf) > self._fp_max_time*16000:
                             last_buf = last_buf[len(last_buf)-self._fp_max_time*16000:]
@@ -288,7 +289,7 @@ class LiveStreamWorker():
                     if timeshift:
                         record_last_buf = record_last_buf + now_buf
                         if len(record_last_buf) > self._record_upload_interval * 16000:
-                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False, 0, 0)
+                            record_fp = acrcloud_stream_decode.create_fingerprint(record_last_buf, False, 50, 0)
                             if record_fp and self._upload_record(record_fp, ts):
                                 record_last_buf = ''
                             else:
@@ -299,6 +300,33 @@ class LiveStreamWorker():
                     self._logger.error(str(e))
             self._logger.info(acr_id + " ProcessFingerprintWorker stopped!")
 
+        def _upload_ts(self, fp):
+            
+            result = True
+            acr_id = self._stream_info['acr_id']
+            stream_id = self._stream_info['id']
+            timestamp = int(time.time()*1000)
+            detail = str(stream_id)+":"+str(timestamp)
+            try:
+                host = self._stream_info['live_host']
+                port = self._stream_info['live_port']
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(self._upload_timeout)
+                sign = acr_id + (32-len(acr_id))*chr(0)
+                body = sign.encode('ascii') +struct.pack('I', len(detail)) + detail.encode('ascii') + fp
+                header = struct.pack('!cBBBIB', b'M', 1, 24, 0, len(body)+1, 2)
+                sock.connect((host, int(port)))
+                sock.sendall(header+body)
+                row = struct.unpack('!ii', sock.recv(8))
+                res_ret = sock.recv(row[1])
+                self._logger.info(acr_id + ":record:" + str(len(fp)) + ":" + detail+":"+ res_ret.decode('ascii'))
+                sock.close()
+            except Exception as e:
+                result = False
+                self._logger.error(acr_id + ":record:" + str(len(fp)) + ":" + str(e))
+
+            return result
+            
         def _upload(self, fp):
             result = True
             acr_id = self._stream_info['acr_id']
@@ -431,7 +459,7 @@ class LiveStreamClient():
             for s in self._config['streams']:
                 d[s['id']] = s
             for s in streams:
-                if s['id'] not in d::
+                if s['id'] not in d:
                     update = True
                     self._config['streams'] = streams
                     break
@@ -556,9 +584,9 @@ def main():
     config = parse_config()
     client = LiveStreamClient(config)
     #if config.get("is_run_with_watchdog"):
-    #client.start_withwatch()
+    client.start_withwatch()
     #else:
-    client.start_single()
+    #    client.start_single()
 
 if __name__ == '__main__':
     main()
