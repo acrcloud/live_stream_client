@@ -277,7 +277,7 @@ class LiveStreamWorker():
                     cur_buf = last_buf + now_buf
                     last_buf = cur_buf
 
-                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 50, 0)
+                    fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 0, 0)
                     if fp and not self._upload_ts(fp):
                         live_upload = False
                         if len(last_buf) > self._fp_max_time*16000:
@@ -301,7 +301,6 @@ class LiveStreamWorker():
             self._logger.info(acr_id + " ProcessFingerprintWorker stopped!")
 
         def _upload_ts(self, fp):
-            
             result = True
             acr_id = self._stream_info['acr_id']
             stream_id = self._stream_info['id']
