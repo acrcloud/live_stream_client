@@ -12,6 +12,7 @@ import threading
 import hashlib
 import urlparse
 import time
+import datetime
 import base64
 import socket
 import hmac
@@ -149,13 +150,16 @@ class LiveStreamWorker():
                     return 1
 
                 if res_data.get('audio_data') != None:
-                    data_secs = round(float(len(res_data.get('audio_data')))/16000, 2)
-                    self._current_time = self._current_time + data_secs
-                    self._time_update_point = self._time_update_point + data_secs
-                    if self._time_update_point > 10:
-                        self._current_time = round(time.time())
-                        self._time_update_point = 0
-                    task = (1, res_data.get('audio_data'), self._current_time)
+                    # data_secs = round(float(len(res_data.get('audio_data')))/16000, 2)
+                    # self._current_time = self._current_time + data_secs
+                    # self._time_update_point = self._time_update_point + data_secs
+                    # if self._time_update_point > 10:
+                    #     self._current_time = round(time.time())
+                    #     self._time_update_point = 0
+                    now = datetime.datetime.utcnow()
+                    ts = datetime.datetime.timestamp(now)
+                    self._current_time = round(ts)
+                    task = (1, res_data.get('audio_data'), ts)
                     self._logger.info("audio len:" + str(len(res_data.get('audio_data'))))
                     self._worker_queue.put(task)
                 else:
@@ -266,7 +270,7 @@ class LiveStreamWorker():
             acr_id = self._stream_info['acr_id']
             self._logger.info(acr_id + " ProcessFingerprintWorker running!")
             self._is_stop = False
-            timeshift = self._stream_info.get('timeshift', 0);
+            timeshift = self._stream_info.get('timeshift', 0)
             while not self._is_stop:
                 try:
                     live_upload = True
@@ -278,7 +282,7 @@ class LiveStreamWorker():
                     last_buf = cur_buf
 
                     fp = acrcloud_stream_decode.create_fingerprint(cur_buf, False, 50, 0)
-                    if fp and not self._upload_ts(fp):
+                    if fp and not self._upload_ts(fp, ts):
                         live_upload = False
                         if len(last_buf) > self._fp_max_time*16000:
                             last_buf = last_buf[len(last_buf)-self._fp_max_time*16000:]
@@ -300,11 +304,11 @@ class LiveStreamWorker():
                     self._logger.error(str(e))
             self._logger.info(acr_id + " ProcessFingerprintWorker stopped!")
 
-        def _upload_ts(self, fp):
+        def _upload_ts(self, fp, ts):
             result = True
             acr_id = self._stream_info['acr_id']
             stream_id = self._stream_info['id']
-            timestamp = int(time.time()*1000)
+            timestamp = int(ts*1000)
             detail = str(stream_id)+":"+str(timestamp)
             try:
                 host = self._stream_info['live_host']
