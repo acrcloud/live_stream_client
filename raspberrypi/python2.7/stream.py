@@ -157,7 +157,7 @@ class LiveStreamWorker():
                     #     self._current_time = round(time.time())
                     #     self._time_update_point = 0
                     now = datetime.datetime.utcnow()
-                    ts = datetime.datetime.timestamp(now)
+                    ts = time.mktime(now.timetuple()) #datetime.datetime.timestamp(now)
                     self._current_time = round(ts)
                     task = (1, res_data.get('audio_data'), ts)
                     self._logger.info("audio len:" + str(len(res_data.get('audio_data'))))
