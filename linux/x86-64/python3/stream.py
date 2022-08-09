@@ -146,7 +146,7 @@ class LiveStreamWorker():
                     # if self._time_update_point > 10:
                     #     self._current_time = round(time.time())
                     #     self._time_update_point = 0
-                    now = datetime.datetime.utcnow()
+                    now = datetime.datetime.now()
                     ts = datetime.datetime.timestamp(now)
                     self._current_time = round(ts)
                     task = (1, res_data.get('audio_data'), ts)
