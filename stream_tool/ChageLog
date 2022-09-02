@@ -1,3 +1,8 @@
+20220902 v2.0.16
+    MD5 (acrcloud_stream_tool.so) = cd09837d3d3c27be7f6628fe5095f5ef
+    MD5 (acrcloud_stream_tool_arm.so) = ab2cd17b50292872b33919242cc57880
+    fixed h264 pts bug.
+
 20211216 v2.0.15
     MD5 (acrcloud_stream_tool.so) = cd09837d3d3c27be7f6628fe5095f5ef
     MD5 (acrcloud_stream_tool_arm.so) = 652bc809db65de0288a6030e8cda984e
