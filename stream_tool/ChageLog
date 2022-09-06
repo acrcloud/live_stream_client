@@ -1,3 +1,8 @@
+20220902 v2.0.18
+    MD5 (acrcloud_stream_tool.so) = b6cd6f9b039a9825e334ea0301e7f829
+    MD5 (acrcloud_stream_tool_arm.so) = 86ac3354685569c65c18821a51c02c5e
+    recompile library.
+
 20220902 v2.0.17
     MD5 (acrcloud_stream_tool.so) = b6cd6f9b039a9825e334ea0301e7f829
     MD5 (acrcloud_stream_tool_arm.so) = 90199f084ebc24424830d33ae50e3f97
