@@ -587,9 +587,9 @@ def main():
     config = parse_config()
     client = LiveStreamClient(config)
     #if config.get("is_run_with_watchdog"):
-    client.start_withwatch()
+    #client.start_withwatch()
     #else:
-    #    client.start_single()
+    client.start_single()
 
 if __name__ == '__main__':
     main()
