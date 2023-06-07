@@ -1,3 +1,7 @@
+20220902 v2.0.19
+    MD5 (acrcloud_stream_tool_arm.so) = 80272b7245934b31035116d13d112856
+    fix srt bug.
+
 20220902 v2.0.18
     MD5 (acrcloud_stream_tool.so) = b6cd6f9b039a9825e334ea0301e7f829
     MD5 (acrcloud_stream_tool_arm.so) = 86ac3354685569c65c18821a51c02c5e
