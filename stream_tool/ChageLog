@@ -1,3 +1,10 @@
+20230707 v2.0.21
+    MD5 (acrcloud_stream_decode.so) = 22e0f889d807d78a47fbc46783c4b7c4
+    MD5 (acrcloud_stream_decode_arm.so) = 998edc7a9985dc03ccd1d4fef738f7e7
+    MD5 (acrcloud_stream_tool.so) = 2f39f3620bdf460666df5185f156edad
+    MD5 (acrcloud_stream_tool_arm.so) = 80272b7245934b31035116d13d112856
+    recompile x86 library
+
 20220902 v2.0.20
     MD5 (acrcloud_stream_decode.so) = 22e0f889d807d78a47fbc46783c4b7c4
     recompile x86 library
