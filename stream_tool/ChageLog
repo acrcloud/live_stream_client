@@ -1,3 +1,8 @@
+20230803 v2.0.21
+    MD5 (python3/acrcloud_stream_tool.so) = 4281f53f2773c94d823b85c7a8f7ee82
+    MD5 (python3/acrcloud_stream_tool_arm.so) = 43f643aef2be8ba987c504eea5fe9c92
+    support python3.
+
 20230707 v2.0.21
     MD5 (acrcloud_stream_decode.so) = 22e0f889d807d78a47fbc46783c4b7c4
     MD5 (acrcloud_stream_decode_arm.so) = 998edc7a9985dc03ccd1d4fef738f7e7
