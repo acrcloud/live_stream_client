@@ -28,39 +28,63 @@ sys.setdefaultencoding("utf8")
 
 def get_remote_config(config):
     try:
-        bucket_name = config['bucket_name']
-        access_key = config['access_key']
-        access_secret = config['access_secret']
-        http_method = "GET"
-        http_uri = "/v2/buckets/"+bucket_name+"/channels"
-        items = []
         page = 1
-        while True:
-            requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)
-            if "stream_ids" in config and len(config['stream_ids']) > 0:
-                requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)+"&streams="+",".join(str(x) for x in config['stream_ids'])
-            req = urllib2.Request(requrl)
-            base64string = base64.b64encode('%s:%s' % (access_key, access_secret))
-            req.add_header("Authorization", "Basic %s" % base64string)
-            response = urllib2.urlopen(req)
-            recv_msg = response.read()
-            json_res = json.loads(recv_msg)
-            logging.getLogger('acrcloud_stream').info(recv_msg)
-            if len(json_res['items']) > 0:
-                for one in json_res['items']:
-                    items.append(one)
-                if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
-                    break 
+        items = []
+        if 'token' in config and 'bucket_id' in config:
+            access_token = config['token']
+            bucket_id = config['bucket_id']
+
+            http_uri = "/buckets/{}/channels".format(bucket_id)
+            while True:
+                requrl = "https://eu-api-v2.acrcloud.com/api" + http_uri + "?ingest=1&page="+str(page)
+                if "stream_ids" in config and len(config['stream_ids']) > 0:
+                    requrl = "https://eu-api-v2.acrcloud.com/api" + http_uri + "?type=ingest&page="+str(page)+"&streams="+",".join(str(x) for x in config['stream_ids'])
+                req = urllib.request.Request(requrl)
+                req.add_header("Authorization", "Bearer %s" % access_token)
+                req.add_header("Accept", "application/json")
+                response = urllib.request.urlopen(req)
+                recv_msg = response.read()
+                json_res = json.loads(recv_msg)
+                logging.getLogger('acrcloud_stream').info(recv_msg)
+                if len(json_res['data']) > 0:
+                    for one in json_res['data']:
+                        items.append(one)
+                    if json_res['meta']['current_page'] >= json_res['meta']['last_page']:
+                        break 
+                    else:
+                        page = page+1
                 else:
-                    page = page+1
-            else:
-                break
-        return items
+                    break
+        else:
+            bucket_name = config['bucket_name']
+            access_key = config['access_key']
+            access_secret = config['access_secret']
+            http_uri = "/v2/buckets/"+bucket_name+"/channels"
+            while True:
+                requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)
+                if "stream_ids" in config and len(config['stream_ids']) > 0:
+                    requrl = "https://api.acrcloud.com" + http_uri + "?type=ingest&page="+str(page)+"&streams="+",".join(str(x) for x in config['stream_ids'])
+                req = urllib.request.Request(requrl)
+                base64string = base64.b64encode((('%s:%s' % (access_key, access_secret)).encode('ascii'))).decode('ascii')  
+                req.add_header("Authorization", "Basic %s" % base64string)
+                response = urllib.request.urlopen(req)
+                recv_msg = response.read()
+                json_res = json.loads(recv_msg)
+                logging.getLogger('acrcloud_stream').info(recv_msg)
+                if len(json_res['items']) > 0:
+                    for one in json_res['items']:
+                        items.append(one)
+                    if json_res['_meta']['currentPage'] >= json_res['_meta']['pageCount']:
+                        break 
+                    else:
+                        page = page+1
+                else:
+                    break
+        return items   
     except Exception as e:
         logging.getLogger('acrcloud_stream').error('get_remote_config : %s' % str(e))
-        #sys.exit(-1)
         return []
-    
+
 class LiveStreamWorker():
 
     def __init__(self, stream_info, config):
@@ -549,14 +573,23 @@ def parse_config():
         else:
             init_log(logging.ERROR, log_file)
 
-        config['access_key'] = init_config['console_access_key']
-        config['access_secret'] = init_config['console_access_secret']
+        if 'console_access_key' in init_config and 'console_access_secret' in init_config:
+            config['access_key'] = init_config['console_access_key']
+            config['access_secret'] = init_config['console_access_secret']
+        elif 'console_access_token' in init_config:
+            config['token'] = init_config['console_access_token']
+        else:
+            print("Error: Load ./client.conf failed. console_access_token not exists in client.conf")
+            sys.exit(1)
         config['remote'] = init_config.get('remote')
         config['restart_interval_seconds'] = init_config.get('restart_interval_seconds', 0)
         config['check_update_interval_minute'] = init_config.get('check_update_interval_minute', 0)
         config['is_run_with_watchdog'] = init_config.get('is_run_with_watchdog', 0)
         config['upload_timeout_sec'] = init_config.get('upload_timeout_sec', 10)
-        config['bucket_name'] = init_config.get('bucket_name')
+        if 'bucket_name' in init_config:
+            config['bucket_name'] = init_config.get('bucket_name')
+        if 'bucket_id' in init_config:
+            config['bucket_id'] = init_config.get('bucket_id')
         config['record_upload'] = init_config.get('record_upload')
         config['record_upload_interval'] = init_config.get('record_upload_interval')
         config['download_timeout_sec'] = init_config.get('download_timeout_sec', 10)
