@@ -12,7 +12,7 @@ x64: [download and install Library(windows/vcredist_x64.exe)](https://www.micros
 1. Before using this tool, you must register on our platform and log into your dashboard.
 2. Sign up now for a free 14 day trial: [http://console.acrcloud.com/signup](http://console.acrcloud.com/signup)
 3. Create a “Live Channel” bucket and add the url of your streams into it.
-4. Create a console access key pairs in the account settings and input this key piars to your client.conf file
+4. Create a access token in the account settings and input this token to your client.conf file
 5. Input your Live Bucket Name to the client.conf file.
 6. Run the stream.py
 7. Create a “Live Channel Detection” project and attach the bucket which contains your chosen stream urls.
