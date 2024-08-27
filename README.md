@@ -21,32 +21,23 @@ x64: [download and install Library(windows/vcredist_x64.exe)](https://www.micros
 ## Configure
 ## client.conf
 ```python
-   # You must replace "XXXXXX" with your access_key and access_secret.
-   console_access_key = "XXXXXX"
-   console_access_secret = "XXXXXX"
-   bucket_name = "your_bucket_name"
-   remote = 1 
-   debug = 0 
-   record_upload = 0
-   record_upload_time = 60
-   
-   # If you do not set log_file, the log will be echo to console.
-   log_file = "acrcloud_stream.log"
+# -*- coding: utf-8 -*-
+# You must replace "XXXXXX" with your console access token.
+# Note: You can get it from the account setting
+console_access_token = "XXXXXX"
+bucket_id = YOUR_BUCKET_ID
+#stream_ids = [""]
+remote = 1
+debug = 0
 
-   # If you set restart_interval_minute, the tool will restart every (restart_interval_minute) minutes.
-   restart_interval_minute = 0 
+# If you do not set log_file, the log will be echo to console.
+log_file = "acrcloud_stream.log"
 
-   # If you set is_run_with_watchdog, there will be a daemon which is used to watch over streams process.
-   is_run_with_watchdog = 1 
-   
-   server = { 
-       'host': '',
-       'port': 0,
-   }
-   
-   source = [ 
-   #       ['udp://127.0.0.1:1234', '(acrc id)', (program_id, default -1)],
-   ] 
+# If you set restart_interval_seconds, the tool will restart every (restart_interval_seconds) seconds.
+restart_interval_seconds = 0
+
+#the tool will check whether the streams have been updated every check_update_interval_minute minutes
+check_update_interval_minute = 60
 ```
 
 ## Run The Tool
