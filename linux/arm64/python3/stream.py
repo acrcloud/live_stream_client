@@ -16,7 +16,7 @@ import multiprocessing
 import platform
 from xml.dom import minidom
 
-import acrcloud_stream_tool_arm as acrcloud_stream_tool
+import acrcloud_stream_tool
 
 def get_remote_config(config):
     try:
