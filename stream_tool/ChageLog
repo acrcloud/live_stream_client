@@ -1,3 +1,8 @@
+20250821 v2.0.22
+    MD5 (acrcloud_stream_tool_arm.so) = 8669b8e7a3acdd6804ae7e0216d359a6
+    MD5 (acrcloud_stream_tool.so) = cdf43a1007dca4254abac06e9fe5bfbe
+    add cmd_c and fix some bugs.
+
 20230803 v2.0.21
     MD5 (python3/acrcloud_stream_tool.so) = 4281f53f2773c94d823b85c7a8f7ee82
     MD5 (python3/acrcloud_stream_tool_arm.so) = 43f643aef2be8ba987c504eea5fe9c92
