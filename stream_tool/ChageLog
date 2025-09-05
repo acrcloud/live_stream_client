@@ -1,3 +1,8 @@
+20250905 v2.0.23
+    MD5 (acrcloud_stream_tool_arm.so) = 06d1da92b86593d155302f4ae1db2cb4
+    MD5 (acrcloud_stream_tool.so) = 0b3411d9e50b46a7723cbd90528459cc
+    fix auto resample bug.
+
 20250821 v2.0.22
     MD5 (acrcloud_stream_tool_arm.so) = 8669b8e7a3acdd6804ae7e0216d359a6
     MD5 (acrcloud_stream_tool.so) = cdf43a1007dca4254abac06e9fe5bfbe
