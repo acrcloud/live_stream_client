@@ -113,6 +113,7 @@ class LiveStreamWorker():
             self._stream_url_list = []
             self._stream_acrid = stream_info['acr_id']
             self._program_id = stream_info.get('program_id', -1)
+            self._extra_opt = stream_info.get('extra_opt')
             self._worker_queue = worker_queue
             self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._download_timeout = self._config.get('download_timeout_sec', 10)
@@ -151,6 +152,13 @@ class LiveStreamWorker():
                 }
                 if (self._retry_n > 1 and stream_url[:4] == 'rtsp'):
                     acrdict['extra_opt'] = {'rtsp_transport':'tcp'}
+                if self._extra_opt:
+                    if 'extra_opt' in acrdict:
+                        for k, v in self._extra_opt.items():
+                            acrdict['extra_opt'][k] = v
+                    else:
+                        acrdict['extra_opt'] = self._extra_opt
+
                 code, msg, ffcode, ffmsg = acrcloud_stream_tool.decode_audio(acrdict)
                 #if code == 0:
                 #    self._is_stop = True
@@ -309,7 +317,7 @@ class LiveStreamWorker():
                         if len(record_last_buf) > self._record_upload_interval * 16000:
                             record_fp = acrcloud_stream_tool.create_fingerprint(record_last_buf, False, 50, 0)
                             if record_fp and self._upload_record(record_fp, ts):
-                                record_last_buf = ''
+                                record_last_buf = b''
                             else:
                                 if len(record_last_buf) > self._record_fp_max_time * 16000:
                                     record_last_buf = record_last_buf[len(last_buf)-self._record_fp_max_time*16000:]
@@ -535,12 +543,12 @@ def init_log(logging_level, log_file):
         logger1.setLevel(logging_level)
         if log_file.strip():
             acrcloud_stream = logging.handlers.RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=1)
-            acrcloud_stream.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'))
+            acrcloud_stream.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(lineno)s- %(message)s'))
             acrcloud_stream.setLevel(logging_level)
             logger1.addHandler(acrcloud_stream)
         else:
             ch = logging.StreamHandler()
-            ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'))
+            ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(lineno)s - %(message)s'))
             ch.setLevel(logging_level)
             logger1.addHandler(ch)
         return logger1

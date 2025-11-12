@@ -121,6 +121,7 @@ class LiveStreamWorker():
             self._stream_url_list = []
             self._stream_acrid = stream_info['acr_id']
             self._program_id = stream_info.get('program_id', -1)
+            self._extra_opt = stream_info.get('extra_opt')
             self._worker_queue = worker_queue
             self._fp_interval = self._config.get('fp_interval_sec', 2)
             self._download_timeout = self._config.get('download_timeout_sec', 10)
@@ -159,6 +160,12 @@ class LiveStreamWorker():
                 }
                 if (self._retry_n > 1 and stream_url[:4] == 'rtsp'):
                     acrdict['extra_opt'] = {'rtsp_transport':'tcp'}
+                if self._extra_opt:
+                    if 'extra_opt' in acrdict:
+                        for k, v in self._extra_opt.items():
+                            acrdict['extra_opt'][k] = v
+                    else:
+                        acrdict['extra_opt'] = self._extra_opt
                 code, msg, ffcode, ffmsg = acrcloud_stream_decode.decode_audio(acrdict)
                 #if code == 0:
                 #    self._is_stop = True
